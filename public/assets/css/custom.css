@@ -1,0 +1,459 @@
+/* ====================================================================
+   Legacy Food — Luxury South Indian Heritage Design System
+   Refined Light Artisan Palette: Ivory, Gold, Deep Emerald
+   ==================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --legacy-gold: #bc944c;
+    --legacy-gold-soft: #d8bd99;
+    --legacy-gold-light: #f3deb6;
+    --legacy-green-deep: #07160d;
+    --legacy-green-dark: #08130c;
+    --legacy-green: #0e2319;
+    --legacy-green-light: #142d1c;
+    --legacy-cream: #faf8f5;
+    --legacy-cream-soft: #f4ede0;
+    --legacy-cream-border: rgba(188, 148, 76, 0.25);
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+    font-family: var(--font-body);
+    background-color: #faf8f5;
+    color: #1c1917;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+    font-family: var(--font-display);
+}
+
+.font-body {
+    font-family: var(--font-body);
+}
+
+/* Background Subtle Noise Texture */
+.noise {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Container */
+.container-x {
+    width: 100%;
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+}
+
+@media (min-width: 768px) {
+    .container-x {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
+/* Gold Shimmer Text Effect */
+.text-shimmer {
+    background: linear-gradient(135deg, #a67c2e 0%, #d8bd99 50%, #946820 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmerAnim 5s linear infinite;
+}
+
+@keyframes shimmerAnim {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Section Header Lines & Eyebrows */
+.eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #bc944c;
+    font-weight: 700;
+}
+
+.gold-line {
+    display: inline-block;
+    width: 32px;
+    height: 1.5px;
+    background: linear-gradient(90deg, transparent, #bc944c);
+}
+
+/* Button Classes */
+.btn-gold {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #bc944c 0%, #d8bd99 50%, #bc944c 100%);
+    color: #07160d;
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1.75rem;
+    border-radius: 9999px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(188, 148, 76, 0.4);
+    box-shadow: 0 4px 16px -2px rgba(188, 148, 76, 0.35);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.btn-gold:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(188, 148, 76, 0.5);
+    background: linear-gradient(135deg, #d8bd99 0%, #f3deb6 50%, #d8bd99 100%);
+    color: #07160d;
+}
+
+.btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: #ffffff;
+    color: #07160d;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.75rem 1.75rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(188, 148, 76, 0.4);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.btn-ghost:hover {
+    background: #faf8f5;
+    border-color: #bc944c;
+    color: #bc944c;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(188, 148, 76, 0.2);
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #bc944c 0%, #d8bd99 50%, #bc944c 100%);
+    color: #07160d;
+    font-weight: 700;
+    padding: 0.625rem 1.5rem;
+    border-radius: 0.75rem;
+    transition: all 0.25s ease;
+}
+
+.btn-primary:hover {
+    box-shadow: 0 4px 16px rgba(188, 148, 76, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #ffffff;
+    color: #07160d;
+    border: 1px solid rgba(188, 148, 76, 0.3);
+    font-weight: 600;
+    padding: 0.625rem 1.5rem;
+    border-radius: 0.75rem;
+    transition: all 0.25s ease;
+}
+
+.btn-secondary:hover {
+    background: #faf8f5;
+    border-color: #bc944c;
+    color: #bc944c;
+}
+
+/* Card Styling for Light Theme */
+.card-glow {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid rgba(188, 148, 76, 0.22);
+    border-radius: 1.25rem;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
+}
+
+.card-glow:hover {
+    transform: translateY(-4px);
+    border-color: rgba(188, 148, 76, 0.5);
+    box-shadow: 0 16px 32px -4px rgba(188, 148, 76, 0.15);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #faf8f5;
+}
+::-webkit-scrollbar-thumb {
+    background: #d8bd99;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #bc944c;
+}
+
+/* Toast Notifications */
+#toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #bc944c;
+    color: #07160d;
+    font-size: 0.875rem;
+    font-weight: 500;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.12);
+    animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ====================================================================
+   Light Theme Automatic Typography Adaptation
+   (Preserves dark accents in Hero, Footer, Topbar and Admin)
+   ==================================================================== */
+main .text-\[\#fdf6e3\]:not(.hero-slide *):not(#hero *) {
+    color: #07160d !important;
+}
+
+main .text-\[\#fdf6e3\]\/90:not(.hero-slide *):not(#hero *) {
+    color: rgba(7, 22, 13, 0.9) !important;
+}
+
+main .text-\[\#fdf6e3\]\/80:not(.hero-slide *):not(#hero *) {
+    color: rgba(7, 22, 13, 0.8) !important;
+}
+
+main .text-\[\#fdf6e3\]\/75:not(.hero-slide *):not(#hero *) {
+    color: rgba(28, 25, 23, 0.8) !important;
+}
+
+main .text-\[\#fdf6e3\]\/70:not(.hero-slide *):not(#hero *) {
+    color: #57534e !important;
+}
+
+main .text-\[\#fdf6e3\]\/60:not(.hero-slide *):not(#hero *) {
+    color: #78716c !important;
+}
+
+main .text-\[\#fdf6e3\]\/50:not(.hero-slide *):not(#hero *) {
+    color: #a8a29e !important;
+}
+
+main .text-\[\#fdf6e3\]\/40:not(.hero-slide *):not(#hero *) {
+    color: #d6d3d1 !important;
+}
+
+/* Light Backgrounds for Content Containers on Storefront */
+main .bg-\[\#07160d\]:not(#hero *):not(.keep-dark) {
+    background-color: #ffffff !important;
+    border-color: #e7dec8 !important;
+    color: #1c1917 !important;
+}
+
+main .bg-\[\#0e2319\]:not(#hero *):not(.keep-dark) {
+    background-color: #faf8f5 !important;
+    border-color: #e7dec8 !important;
+    color: #1c1917 !important;
+}
+
+main .bg-white\/\[0\.02\],
+main .bg-white\/\[0\.04\],
+main .bg-white\/\[0\.05\],
+main .bg-white\/\[0\.06\],
+main .bg-white\/\[0\.07\] {
+    background-color: #faf8f5 !important;
+    border-color: #e7dec8 !important;
+    color: #1c1917 !important;
+}
+
+/* Form input elements */
+main input[type="text"],
+main input[type="email"],
+main input[type="tel"],
+main input[type="password"],
+main input[type="number"],
+main select,
+main textarea {
+    background-color: #ffffff !important;
+    color: #1c1917 !important;
+    border-color: #d6c7af !important;
+}
+
+main input::placeholder,
+main textarea::placeholder {
+    color: #a8a29e !important;
+}
+
+/* ====================================================================
+   Strict Header Rules for Light Theme Visibility
+   ==================================================================== */
+#site-header {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e7dec8 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+#site-header nav a,
+#site-header nav button,
+#site-header #mobile-menu-btn,
+#site-header .cart-open-btn,
+#site-header a[title="Wishlist"],
+#site-header a[title="My Account"],
+#site-header a[title="Sign In"] {
+    color: #07160d !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+}
+
+#site-header nav a:hover,
+#site-header nav button:hover,
+#site-header #mobile-menu-btn:hover,
+#site-header .cart-open-btn:hover,
+#site-header a[title="Wishlist"]:hover,
+#site-header a[title="My Account"]:hover,
+#site-header a[title="Sign In"]:hover {
+    color: #bc944c !important;
+}
+
+#site-header svg {
+    color: currentColor !important;
+}
+
+/* ====================================================================
+   Admin Portal Light Theme System
+   ==================================================================== */
+body.admin-light {
+    background-color: #faf8f5 !important;
+    color: #1c1917 !important;
+}
+
+body.admin-light main div.rounded-2xl {
+    background-color: #ffffff;
+    border-color: #e7dec8;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+body.admin-light main table th {
+    background-color: #faf8f5 !important;
+    color: #44403c !important;
+    border-color: #e7dec8 !important;
+}
+
+body.admin-light main table td {
+    color: #1c1917 !important;
+    border-color: #f5eee2 !important;
+}
+
+body.admin-light main table tr:hover {
+    background-color: #faf8f5 !important;
+}
+
+body.admin-light main input,
+body.admin-light main select,
+body.admin-light main textarea {
+    background-color: #ffffff !important;
+    color: #1c1917 !important;
+    border-color: #d6c7af !important;
+}
+
+body.admin-light main label {
+    color: #07160d !important;
+    font-weight: 600 !important;
+}
+
+body.admin-light main h1,
+body.admin-light main h2,
+body.admin-light main h3 {
+    color: #07160d !important;
+}
+
+/* Active Navigation Indicators */
+.nav-link-active {
+    color: #bc944c !important;
+    position: relative;
+    font-weight: 700 !important;
+}
+
+.nav-link-active::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #bc944c;
+    border-radius: 9999px;
+}
+
+.admin-nav-active {
+    background-color: #bc944c !important;
+    color: #07160d !important;
+    font-weight: 700 !important;
+    box-shadow: 0 1px 3px rgba(188, 148, 76, 0.25) !important;
+}
+
+/* ====================================================================
+   Mobile Navigation Drawer Styling
+   ==================================================================== */
+#mobile-menu-drawer {
+    background-color: #faf8f5 !important;
+    box-shadow: 6px 0 30px rgba(7, 22, 13, 0.18) !important;
+}
+
+#mobile-menu-drawer a,
+#mobile-menu-drawer button {
+    -webkit-tap-highlight-color: transparent;
+}
+

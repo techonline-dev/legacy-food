@@ -1,0 +1,9 @@
+.env.local
+.env.backup
+admin_cookies.txt
+test_cookie.txt
+*.log
+*.tmp
+vendor/
+.DS_Store
+Thumbs.db

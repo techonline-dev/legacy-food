@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" fill="none">
+    <g transform="translate(10, 10)">
+        <!-- Decorative Seal Icon -->
+        <circle cx="20" cy="20" r="18" stroke="#bc944c" stroke-width="1.8" fill="none"/>
+        <circle cx="20" cy="20" r="14" stroke="#bc944c" stroke-dasharray="2,2" stroke-width="1" fill="none"/>
+        <path d="M20 7 L23 15 L31 16 L25 22 L27 30 L20 26 L13 30 L15 22 L9 16 L17 15 Z" fill="#bc944c" opacity="0.9"/>
+        
+        <!-- Brand Typography -->
+        <text x="50" y="24" font-family="'Playfair Display', Georgia, serif" font-size="22" font-weight="700" fill="#fdf6e3" letter-spacing="3">LEGACY</text>
+        <text x="52" y="36" font-family="'Plus Jakarta Sans', sans-serif" font-size="7.5" font-weight="600" fill="#bc944c" letter-spacing="3.5">CRAFTED IN SOUTH INDIA</text>
+    </g>
+</svg>

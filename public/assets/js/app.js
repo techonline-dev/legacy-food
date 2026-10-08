@@ -101,10 +101,11 @@ function initMobileMenu() {
         });
     }
 
-    // Auto-close on link click (except accordion toggle)
+    // Auto-close on link click (except hash / empty anchors)
     drawer.querySelectorAll('a').forEach(a => {
         a.addEventListener('click', () => {
-            if (!a.getAttribute('target')) {
+            const href = a.getAttribute('href');
+            if (!a.getAttribute('target') && href && href !== '#' && !href.startsWith('javascript:')) {
                 toggle(false);
             }
         });

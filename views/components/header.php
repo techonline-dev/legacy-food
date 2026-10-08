@@ -105,14 +105,34 @@ $getNavIcon = function(string $title, string $url, string $colorClass = 'text-st
                         $itemUrl = $formatNavUrl($navItem['url'] ?? '#');
                         $isActive = $isNavActive($navItem['url'] ?? '');
                         $targetAttr = (($navItem['target'] ?? '_self') === '_blank') ? ' target="_blank" rel="noopener"' : '';
+
+                        // Also check if any child or descendant is active
+                        $isChildActiveAny = false;
+                        if ($hasChildren) {
+                            foreach ($navItem['children'] as $c) {
+                                if ($isNavActive($c['url'] ?? '')) {
+                                    $isChildActiveAny = true;
+                                    break;
+                                }
+                                if (!empty($c['children'])) {
+                                    foreach ($c['children'] as $gc) {
+                                        if ($isNavActive($gc['url'] ?? '')) {
+                                            $isChildActiveAny = true;
+                                            break 2;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        $isSectionActive = $isActive || $isChildActiveAny;
                         ?>
                         <?php if ($hasChildren): ?>
                             <!-- Dropdown Menu Item -->
                             <div class="relative group">
-                                <a href="<?= e($itemUrl) ?>"<?= $targetAttr ?> class="relative py-1 flex items-center gap-1 text-xs uppercase tracking-widest font-bold transition-colors <?= $isActive ? 'text-[#bc944c]' : 'text-stone-900 hover:text-[#bc944c]' ?>">
+                                <a href="<?= e($itemUrl) ?>"<?= $targetAttr ?> class="relative py-1 flex items-center gap-1 text-xs uppercase tracking-widest font-bold transition-colors <?= $isSectionActive ? 'text-[#bc944c]' : 'text-stone-900 hover:text-[#bc944c]' ?>">
                                     <span><?= e($navItem['title']) ?></span>
                                     <svg class="w-3.5 h-3.5 transition-transform group-hover:rotate-180 text-[#bc944c]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
-                                    <?php if ($isActive): ?>
+                                    <?php if ($isSectionActive): ?>
                                         <span class="absolute -bottom-1 left-0 right-0 h-[2px] bg-[#bc944c] rounded-full"></span>
                                     <?php endif; ?>
                                 </a>
@@ -351,35 +371,88 @@ $getNavIcon = function(string $title, string $url, string $colorClass = 'text-st
                     $itemUrl = $formatNavUrl($navItem['url'] ?? '#');
                     $isActive = $isNavActive($navItem['url'] ?? '');
                     $targetAttr = (($navItem['target'] ?? '_self') === '_blank') ? ' target="_blank" rel="noopener"' : '';
-                    $iconColor = $isActive ? 'text-[#bc944c]' : 'text-stone-400';
+
+                    // Check if any child or grandchild is active
+                    $isChildActiveAny = false;
+                    if ($hasChildren) {
+                        foreach ($navItem['children'] as $c) {
+                            if ($isNavActive($c['url'] ?? '')) {
+                                $isChildActiveAny = true;
+                                break;
+                            }
+                            if (!empty($c['children'])) {
+                                foreach ($c['children'] as $gc) {
+                                    if ($isNavActive($gc['url'] ?? '')) {
+                                        $isChildActiveAny = true;
+                                        break 2;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    $isSectionActive = $isActive || $isChildActiveAny;
+                    $iconColor = $isSectionActive ? 'text-[#bc944c]' : 'text-stone-400';
                     ?>
                     <?php if ($hasChildren): ?>
-                        <div class="rounded-xl overflow-hidden border border-[#e7dec8] bg-white">
-                            <button type="button" onclick="document.getElementById('mobile-sub-<?= $mIdx ?>')?.classList.toggle('hidden'); document.getElementById('mobile-arrow-<?= $mIdx ?>')?.classList.toggle('rotate-180');" class="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-stone-800 hover:text-[#bc944c] transition-colors">
+                        <div class="rounded-xl overflow-hidden border transition-all duration-200 <?= $isSectionActive ? 'border-[#bc944c]/60 ring-1 ring-[#bc944c]/20 bg-white' : 'border-[#e7dec8] bg-white' ?>">
+                            <button type="button" onclick="document.getElementById('mobile-sub-<?= $mIdx ?>')?.classList.toggle('hidden'); document.getElementById('mobile-arrow-<?= $mIdx ?>')?.classList.toggle('rotate-180');" class="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold <?= $isSectionActive ? 'text-[#07160d]' : 'text-stone-800 hover:text-[#bc944c]' ?> transition-colors">
                                 <span class="flex items-center gap-3">
                                     <?= $getNavIcon($navItem['title'], $navItem['url'] ?? '', $iconColor) ?>
                                     <span><?= e($navItem['title']) ?></span>
                                 </span>
                                 <div class="flex items-center gap-1.5">
                                     <span class="text-[10px] font-semibold bg-amber-50 text-[#bc944c] px-2 py-0.5 rounded-full"><?= count($navItem['children']) ?></span>
-                                    <svg id="mobile-arrow-<?= $mIdx ?>" class="w-3.5 h-3.5 text-stone-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg id="mobile-arrow-<?= $mIdx ?>" class="w-3.5 h-3.5 text-stone-400 transform transition-transform duration-200 <?= $isChildActiveAny ? 'rotate-180' : '' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                     </svg>
                                 </div>
                             </button>
-                            <div id="mobile-sub-<?= $mIdx ?>" class="hidden divide-y divide-[#f5efe4] border-t border-[#f0e9dc] bg-[#faf8f5]/60">
-                                <?php foreach ($navItem['children'] as $childItem): ?>
+                            <div id="mobile-sub-<?= $mIdx ?>" class="<?= $isChildActiveAny ? '' : 'hidden' ?> divide-y divide-[#f5efe4] border-t border-[#f0e9dc] bg-[#faf8f5]/60">
+                                <?php if ($itemUrl !== '#' && $itemUrl !== ''): ?>
+                                    <a href="<?= e($itemUrl) ?>"<?= $targetAttr ?> class="flex items-center justify-between px-4 py-2.5 text-xs font-bold text-[#bc944c] hover:bg-white bg-amber-50/40 transition-colors">
+                                        <span>View All <?= e($navItem['title']) ?></span>
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                    </a>
+                                <?php endif; ?>
+                                <?php foreach ($navItem['children'] as $cIdx => $childItem): ?>
                                     <?php 
                                     $childUrl = $formatNavUrl($childItem['url'] ?? '#');
                                     $isChildActive = $isNavActive($childItem['url'] ?? '');
                                     $childTarget = (($childItem['target'] ?? '_self') === '_blank') ? ' target="_blank" rel="noopener"' : '';
+                                    $hasGrandchildren = !empty($childItem['children']);
                                     ?>
-                                    <a href="<?= e($childUrl) ?>"<?= $childTarget ?> class="flex items-center justify-between px-4 py-2 text-xs transition-colors <?= $isChildActive ? 'font-bold text-[#bc944c] bg-amber-50/80' : 'text-stone-700 hover:text-[#07160d] hover:bg-white' ?>">
-                                        <span class="flex items-center gap-2.5">
-                                            <span class="w-1.5 h-1.5 rounded-full <?= $isChildActive ? 'bg-[#bc944c]' : 'bg-stone-300' ?>"></span>
-                                            <span><?= e($childItem['title']) ?></span>
-                                        </span>
-                                    </a>
+                                    <?php if ($hasGrandchildren): ?>
+                                        <div class="border-b border-[#f0e9dc]">
+                                            <button type="button" onclick="document.getElementById('mobile-sub-<?= $mIdx ?>-<?= $cIdx ?>')?.classList.toggle('hidden'); document.getElementById('mobile-arrow-<?= $mIdx ?>-<?= $cIdx ?>')?.classList.toggle('rotate-180');" class="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-stone-800 hover:text-[#bc944c] transition-colors">
+                                                <span class="flex items-center gap-2">
+                                                    <span class="w-1.5 h-1.5 rounded-full <?= $isChildActive ? 'bg-[#bc944c]' : 'bg-stone-300' ?>"></span>
+                                                    <span><?= e($childItem['title']) ?></span>
+                                                </span>
+                                                <svg id="mobile-arrow-<?= $mIdx ?>-<?= $cIdx ?>" class="w-3 h-3 text-stone-400 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
+                                            <div id="mobile-sub-<?= $mIdx ?>-<?= $cIdx ?>" class="hidden pl-6 bg-[#f5efe4]/40 divide-y divide-[#ebe2d3]">
+                                                <?php foreach ($childItem['children'] as $gc): ?>
+                                                    <?php 
+                                                    $gcUrl = $formatNavUrl($gc['url'] ?? '#');
+                                                    $isGcActive = $isNavActive($gc['url'] ?? '');
+                                                    $gcTarget = (($gc['target'] ?? '_self') === '_blank') ? ' target="_blank" rel="noopener"' : '';
+                                                    ?>
+                                                    <a href="<?= e($gcUrl) ?>"<?= $gcTarget ?> class="block px-4 py-1.5 text-xs transition-colors <?= $isGcActive ? 'font-bold text-[#bc944c]' : 'text-stone-600 hover:text-[#07160d]' ?>">
+                                                        <?= e($gc['title']) ?>
+                                                    </a>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                    <?php else: ?>
+                                        <a href="<?= e($childUrl) ?>"<?= $childTarget ?> class="flex items-center justify-between px-4 py-2 text-xs transition-colors <?= $isChildActive ? 'font-bold text-[#bc944c] bg-amber-50/80' : 'text-stone-700 hover:text-[#07160d] hover:bg-white' ?>">
+                                            <span class="flex items-center gap-2.5">
+                                                <span class="w-1.5 h-1.5 rounded-full <?= $isChildActive ? 'bg-[#bc944c]' : 'bg-stone-300' ?>"></span>
+                                                <span><?= e($childItem['title']) ?></span>
+                                            </span>
+                                        </a>
+                                    <?php endif; ?>
                                 <?php endforeach; ?>
                             </div>
                         </div>

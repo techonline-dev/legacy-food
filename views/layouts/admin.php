@@ -102,6 +102,15 @@ $currentUri = $_SERVER['REQUEST_URI'] ?? '';
                     <?php if ($act): ?><span class="w-1.5 h-1.5 rounded-full bg-[#07160d]"></span><?php endif; ?>
                 </a>
 
+                <?php $act = is_active_path('admin/menu'); ?>
+                <a href="<?= url('admin/menu') ?>" class="flex items-center justify-between px-3 py-2.5 rounded-xl font-medium transition-colors <?= $act ? 'bg-[#bc944c] text-[#07160d] font-bold shadow-sm' : 'text-stone-700 hover:bg-[#faf8f5] hover:text-[#07160d]' ?>" <?= $act ? 'aria-current="page"' : '' ?>>
+                    <div class="flex items-center gap-3">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+                        <span>Navigation Menu</span>
+                    </div>
+                    <?php if ($act): ?><span class="w-1.5 h-1.5 rounded-full bg-[#07160d]"></span><?php endif; ?>
+                </a>
+
                 <?php $act = is_active_path('admin/reviews'); ?>
                 <a href="<?= url('admin/reviews') ?>" class="flex items-center justify-between px-3 py-2.5 rounded-xl font-medium transition-colors <?= $act ? 'bg-[#bc944c] text-[#07160d] font-bold shadow-sm' : 'text-stone-700 hover:bg-[#faf8f5] hover:text-[#07160d]' ?>" <?= $act ? 'aria-current="page"' : '' ?>>
                     <div class="flex items-center gap-3">

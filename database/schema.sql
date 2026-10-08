@@ -555,4 +555,20 @@ CREATE TABLE IF NOT EXISTS `newsletter_subscribers` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 38. MENU ITEMS (Navigation Menu & Drag-Drop Submenus)
+CREATE TABLE IF NOT EXISTS `menu_items` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `menu_group` VARCHAR(50) NOT NULL DEFAULT 'header',
+    `parent_id` INT UNSIGNED NULL DEFAULT NULL,
+    `title` VARCHAR(150) NOT NULL,
+    `url` VARCHAR(255) NOT NULL,
+    `target` ENUM('_self', '_blank') DEFAULT '_self',
+    `sort_order` INT NOT NULL DEFAULT 0,
+    `is_active` TINYINT(1) DEFAULT 1,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_menu_group` (`menu_group`, `sort_order`),
+    INDEX `idx_parent_id` (`parent_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

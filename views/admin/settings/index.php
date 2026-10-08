@@ -476,6 +476,23 @@ $footerBadgesText = $footer['footer_badges_text'] ?? '100% NABL Accredited Lab V
                     <p class="text-xs text-stone-500 mt-0.5">Customize top announcement notification bar, header logo, and WhatsApp quick action button.</p>
                 </div>
 
+                <!-- Quick Link to Drag-Drop Menu Builder -->
+                <div class="p-3.5 rounded-xl bg-amber-50/70 border border-[#bc944c]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg bg-[#bc944c] text-[#07160d] flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                            ☰
+                        </span>
+                        <div>
+                            <h4 class="font-bold text-xs text-[#07160d]">Store Navigation Menu & Dropdown Submenus</h4>
+                            <p class="text-[11px] text-stone-600">Reorder links, create nested submenus, and manage custom URLs.</p>
+                        </div>
+                    </div>
+                    <a href="<?= url('admin/menu') ?>" class="btn-primary text-xs py-1.5 px-3.5 font-bold whitespace-nowrap inline-flex items-center gap-1 shadow-xs self-start sm:self-auto">
+                        <span>Open Menu Builder</span>
+                        <span>↗</span>
+                    </a>
+                </div>
+
                 <div class="space-y-5">
                     <!-- Announcement Bar Toggle -->
                     <div class="flex items-center justify-between p-4 rounded-xl bg-stone-50 border border-[#e7dec8]">

@@ -133,6 +133,29 @@ class Database {
                     if ($colsCatDesc === 0) {
                         self::$instance->exec("ALTER TABLE `product_categories` ADD COLUMN `meta_description` TEXT NULL DEFAULT NULL AFTER `meta_title`");
                     }
+
+                    // Ensure menu_items table exists
+                    $hasMenuItems = self::$instance->query("SHOW TABLES LIKE 'menu_items'")->rowCount();
+                    if ($hasMenuItems === 0) {
+                        self::$instance->exec("
+                            CREATE TABLE IF NOT EXISTS `menu_items` (
+                                `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                                `menu_group` VARCHAR(50) NOT NULL DEFAULT 'header',
+                                `parent_id` INT UNSIGNED NULL DEFAULT NULL,
+                                `title` VARCHAR(150) NOT NULL,
+                                `url` VARCHAR(255) NOT NULL,
+                                `target` ENUM('_self', '_blank') DEFAULT '_self',
+                                `sort_order` INT NOT NULL DEFAULT 0,
+                                `is_active` TINYINT(1) DEFAULT 1,
+                                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                INDEX `idx_menu_group` (`menu_group`, `sort_order`),
+                                INDEX `idx_parent_id` (`parent_id`)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                        ");
+
+                        \App\Models\MenuItem::seedDefaultItems();
+                    }
                 } catch (\Throwable $ex) {
                     // Ignore if migration fails
                 }

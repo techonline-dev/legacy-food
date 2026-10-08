@@ -140,6 +140,14 @@ $router->group(['middleware' => [AdminMiddleware::class]], function(Router $r) {
     $r->post('/admin/banners/update/{id}', 'Admin\AdminBannerController@update');
     $r->post('/admin/banners/delete/{id}', 'Admin\AdminBannerController@delete');
 
+    // Navigation Menu Builder (Drag & Drop)
+    $r->get('/admin/menu', 'Admin\AdminMenuController@index');
+    $r->post('/admin/menu/store', 'Admin\AdminMenuController@store');
+    $r->post('/admin/menu/update/{id}', 'Admin\AdminMenuController@update');
+    $r->post('/admin/menu/delete/{id}', 'Admin\AdminMenuController@delete');
+    $r->post('/admin/menu/reorder', 'Admin\AdminMenuController@reorder');
+    $r->post('/admin/menu/reset', 'Admin\AdminMenuController@reset');
+
     // Pages (CMS & SEO)
     $r->get('/admin/pages', 'Admin\AdminPageController@index');
     $r->get('/admin/pages/create', 'Admin\AdminPageController@create');

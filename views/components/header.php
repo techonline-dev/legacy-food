@@ -21,6 +21,53 @@ $showWhatsapp = Setting::get('header_show_whatsapp', '1');
 $whatsappText = Setting::get('header_whatsapp_text', 'Order on WhatsApp');
 $whatsappNumber = Setting::get('whatsapp_number', '919845279936');
 $whatsappNumberClean = preg_replace('/[^0-9]/', '', $whatsappNumber);
+
+// Dynamic Navigation Menu Tree
+$navMenuTree = \App\Models\MenuItem::getTree('header', true);
+
+$formatNavUrl = function(string $rawUrl) {
+    if (empty($rawUrl)) return '#';
+    if (str_starts_with($rawUrl, 'http://') || str_starts_with($rawUrl, 'https://') || str_starts_with($rawUrl, '#') || str_starts_with($rawUrl, 'mailto:') || str_starts_with($rawUrl, 'tel:')) {
+        return $rawUrl;
+    }
+    return url(ltrim($rawUrl, '/'));
+};
+
+$isNavActive = function(string $rawUrl) {
+    if (empty($rawUrl) || str_starts_with($rawUrl, 'http://') || str_starts_with($rawUrl, 'https://') || $rawUrl === '#') {
+        return false;
+    }
+    $trimmed = trim($rawUrl, '/');
+    return is_active_path($trimmed ?: '/', $trimmed === '');
+};
+
+$getNavIcon = function(string $title, string $url, string $colorClass = 'text-stone-400') {
+    $t = strtolower(trim($title));
+    $u = strtolower(trim($url, '/'));
+
+    if ($t === 'home' || $u === '' || $u === 'home') {
+        return '<svg class="w-4 h-4 ' . $colorClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>';
+    }
+    if (str_contains($t, 'categor') || str_contains($t, 'collect') || str_contains($t, 'shop') || str_contains($t, 'product') || str_contains($u, 'shop') || str_contains($u, 'category')) {
+        return '<svg class="w-4 h-4 ' . $colorClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>';
+    }
+    if (str_contains($t, 'about') || str_contains($t, 'story') || str_contains($t, 'heritage') || str_contains($u, 'about')) {
+        return '<svg class="w-4 h-4 ' . $colorClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>';
+    }
+    if (str_contains($t, 'contact') || str_contains($t, 'support') || str_contains($u, 'contact')) {
+        return '<svg class="w-4 h-4 ' . $colorClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>';
+    }
+    if (str_contains($t, 'faq') || str_contains($u, 'faq')) {
+        return '<svg class="w-4 h-4 ' . $colorClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+    }
+    if (str_contains($t, 'wishlist') || str_contains($u, 'wishlist')) {
+        return '<svg class="w-4 h-4 ' . $colorClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>';
+    }
+    if (str_contains($t, 'order') || str_contains($u, 'order')) {
+        return '<svg class="w-4 h-4 ' . $colorClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>';
+    }
+    return '<svg class="w-4 h-4 ' . $colorClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>';
+};
 ?>
 
 <header id="site-header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-white/95 backdrop-blur-md border-b border-[#e7dec8] shadow-sm">
@@ -51,52 +98,80 @@ $whatsappNumberClean = preg_replace('/[^0-9]/', '', $whatsappNumber);
 
             <!-- Desktop Nav Links -->
             <nav class="hidden lg:flex items-center gap-8">
-                <?php $isHome = is_active_path('/', true); ?>
-                <a href="<?= url('/') ?>" class="relative py-1 text-xs uppercase tracking-widest font-bold transition-colors <?= $isHome ? 'text-[#bc944c]' : 'text-stone-900 hover:text-[#bc944c]' ?>">
-                    <span>Home</span>
-                    <?php if ($isHome): ?>
-                        <span class="absolute -bottom-1 left-0 right-0 h-[2px] bg-[#bc944c] rounded-full"></span>
-                    <?php endif; ?>
-                </a>
-
-                <!-- Categories Dropdown -->
-                <?php $isCat = is_active_path('category'); ?>
-                <div class="relative group">
-                    <button class="relative py-1 flex items-center gap-1 text-xs uppercase tracking-widest font-bold transition-colors <?= $isCat ? 'text-[#bc944c]' : 'text-stone-900 hover:text-[#bc944c]' ?>">
-                        <span>Categories</span>
-                        <svg class="w-3.5 h-3.5 transition-transform group-hover:rotate-180 text-[#bc944c]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
-                        <?php if ($isCat): ?>
+                <?php if (!empty($navMenuTree)): ?>
+                    <?php foreach ($navMenuTree as $navItem): ?>
+                        <?php 
+                        $hasChildren = !empty($navItem['children']);
+                        $itemUrl = $formatNavUrl($navItem['url'] ?? '#');
+                        $isActive = $isNavActive($navItem['url'] ?? '');
+                        $targetAttr = (($navItem['target'] ?? '_self') === '_blank') ? ' target="_blank" rel="noopener"' : '';
+                        ?>
+                        <?php if ($hasChildren): ?>
+                            <!-- Dropdown Menu Item -->
+                            <div class="relative group">
+                                <a href="<?= e($itemUrl) ?>"<?= $targetAttr ?> class="relative py-1 flex items-center gap-1 text-xs uppercase tracking-widest font-bold transition-colors <?= $isActive ? 'text-[#bc944c]' : 'text-stone-900 hover:text-[#bc944c]' ?>">
+                                    <span><?= e($navItem['title']) ?></span>
+                                    <svg class="w-3.5 h-3.5 transition-transform group-hover:rotate-180 text-[#bc944c]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                    <?php if ($isActive): ?>
+                                        <span class="absolute -bottom-1 left-0 right-0 h-[2px] bg-[#bc944c] rounded-full"></span>
+                                    <?php endif; ?>
+                                </a>
+                                <div class="absolute top-full left-0 w-60 pt-2 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200 z-50">
+                                    <div class="rounded-2xl bg-white border border-[#e7dec8] shadow-2xl p-2.5 space-y-1">
+                                        <?php foreach ($navItem['children'] as $childItem): ?>
+                                            <?php 
+                                            $childUrl = $formatNavUrl($childItem['url'] ?? '#');
+                                            $isChildActive = $isNavActive($childItem['url'] ?? '');
+                                            $childTarget = (($childItem['target'] ?? '_self') === '_blank') ? ' target="_blank" rel="noopener"' : '';
+                                            ?>
+                                            <a href="<?= e($childUrl) ?>"<?= $childTarget ?> class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors <?= $isChildActive ? 'bg-amber-50 text-[#bc944c] font-bold border border-[#d6c7af]' : 'text-stone-900 hover:bg-[#faf8f5] hover:text-[#bc944c]' ?>">
+                                                <span><?= e($childItem['title']) ?></span>
+                                            </a>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <!-- Standard Single Link -->
+                            <a href="<?= e($itemUrl) ?>"<?= $targetAttr ?> class="relative py-1 text-xs uppercase tracking-widest font-bold transition-colors <?= $isActive ? 'text-[#bc944c]' : 'text-stone-900 hover:text-[#bc944c]' ?>">
+                                <span><?= e($navItem['title']) ?></span>
+                                <?php if ($isActive): ?>
+                                    <span class="absolute -bottom-1 left-0 right-0 h-[2px] bg-[#bc944c] rounded-full"></span>
+                                <?php endif; ?>
+                            </a>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <?php $isHome = is_active_path('/', true); ?>
+                    <a href="<?= url('/') ?>" class="relative py-1 text-xs uppercase tracking-widest font-bold transition-colors <?= $isHome ? 'text-[#bc944c]' : 'text-stone-900 hover:text-[#bc944c]' ?>">
+                        <span>Home</span>
+                        <?php if ($isHome): ?>
                             <span class="absolute -bottom-1 left-0 right-0 h-[2px] bg-[#bc944c] rounded-full"></span>
                         <?php endif; ?>
-                    </button>
-                    <div class="absolute top-full left-0 w-60 pt-2 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200">
-                        <div class="rounded-2xl bg-white border border-[#e7dec8] shadow-2xl p-2.5 space-y-1">
-                            <?php foreach ($categories as $cat): ?>
-                                <?php $isSubCat = is_active_path('category/' . $cat['slug'], true); ?>
-                                <a href="<?= url('category/' . $cat['slug']) ?>" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors <?= $isSubCat ? 'bg-amber-50 text-[#bc944c] font-bold border border-[#d6c7af]' : 'text-stone-900 hover:bg-[#faf8f5] hover:text-[#bc944c]' ?>">
-                                    <span><?= e($cat['name']) ?></span>
-                                    <span class="text-[10px] text-[#bc944c] font-bold"><?= $cat['product_count'] ?? '' ?></span>
-                                </a>
-                            <?php endforeach; ?>
+                    </a>
+                    <?php $isCat = is_active_path('category'); ?>
+                    <div class="relative group">
+                        <button class="relative py-1 flex items-center gap-1 text-xs uppercase tracking-widest font-bold transition-colors <?= $isCat ? 'text-[#bc944c]' : 'text-stone-900 hover:text-[#bc944c]' ?>">
+                            <span>Categories</span>
+                            <svg class="w-3.5 h-3.5 transition-transform group-hover:rotate-180 text-[#bc944c]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div class="absolute top-full left-0 w-60 pt-2 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200">
+                            <div class="rounded-2xl bg-white border border-[#e7dec8] shadow-2xl p-2.5 space-y-1">
+                                <?php foreach ($categories as $cat): ?>
+                                    <a href="<?= url('category/' . $cat['slug']) ?>" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors text-stone-900 hover:bg-[#faf8f5] hover:text-[#bc944c]">
+                                        <span><?= e($cat['name']) ?></span>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <?php $isAbout = is_active_path('about'); ?>
-                <a href="<?= url('about') ?>" class="relative py-1 text-xs uppercase tracking-widest font-bold transition-colors <?= $isAbout ? 'text-[#bc944c]' : 'text-stone-900 hover:text-[#bc944c]' ?>">
-                    <span>About Us</span>
-                    <?php if ($isAbout): ?>
-                        <span class="absolute -bottom-1 left-0 right-0 h-[2px] bg-[#bc944c] rounded-full"></span>
-                    <?php endif; ?>
-                </a>
-
-                <?php $isContact = is_active_path('contact'); ?>
-                <a href="<?= url('contact') ?>" class="relative py-1 text-xs uppercase tracking-widest font-bold transition-colors <?= $isContact ? 'text-[#bc944c]' : 'text-stone-900 hover:text-[#bc944c]' ?>">
-                    <span>Contact</span>
-                    <?php if ($isContact): ?>
-                        <span class="absolute -bottom-1 left-0 right-0 h-[2px] bg-[#bc944c] rounded-full"></span>
-                    <?php endif; ?>
-                </a>
+                    <a href="<?= url('about') ?>" class="relative py-1 text-xs uppercase tracking-widest font-bold transition-colors text-stone-900 hover:text-[#bc944c]">
+                        <span>About Us</span>
+                    </a>
+                    <a href="<?= url('contact') ?>" class="relative py-1 text-xs uppercase tracking-widest font-bold transition-colors text-stone-900 hover:text-[#bc944c]">
+                        <span>Contact</span>
+                    </a>
+                <?php endif; ?>
             </nav>
 
             <!-- Account, Wishlist, Cart, WhatsApp Actions -->
@@ -269,45 +344,92 @@ $whatsappNumberClean = preg_replace('/[^0-9]/', '', $whatsappNumber);
 
         <!-- Primary Navigation List -->
         <nav class="space-y-1">
-            <!-- Home -->
-            <?php $isHome = is_active_path('/', true); ?>
-            <a href="<?= url('/') ?>" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all <?= $isHome ? 'bg-[#07160d] text-white shadow-xs' : 'text-stone-800 hover:bg-white hover:text-[#bc944c]' ?>">
-                <svg class="w-4 h-4 <?= $isHome ? 'text-[#bc944c]' : 'text-stone-400' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                </svg>
-                <span>Home</span>
-            </a>
-
-            <!-- Collections Accordion -->
-            <?php $hasActiveCat = is_active_path('category'); ?>
-            <div class="rounded-xl overflow-hidden border border-[#e7dec8] bg-white">
-                <button type="button" id="mobile-collections-toggle" class="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-stone-800 hover:text-[#bc944c] transition-colors">
-                    <span class="flex items-center gap-3">
-                        <svg class="w-4 h-4 <?= $hasActiveCat ? 'text-[#bc944c]' : 'text-stone-400' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                        </svg>
-                        <span>Collections</span>
-                    </span>
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-[10px] font-semibold bg-amber-50 text-[#bc944c] px-2 py-0.5 rounded-full"><?= count($categories) ?></span>
-                        <svg id="mobile-collections-arrow" class="w-3.5 h-3.5 text-stone-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </div>
-                </button>
-                <div id="mobile-collections-list" class="divide-y divide-[#f5efe4] border-t border-[#f0e9dc] bg-[#faf8f5]/60">
-                    <?php foreach ($categories as $cat): ?>
-                        <?php $isCatActive = is_active_path('category/' . $cat['slug'], true); ?>
-                        <a href="<?= url('category/' . $cat['slug']) ?>" class="flex items-center justify-between px-4 py-2 text-xs transition-colors <?= $isCatActive ? 'font-bold text-[#bc944c] bg-amber-50/80' : 'text-stone-700 hover:text-[#07160d] hover:bg-white' ?>">
-                            <span class="flex items-center gap-2.5">
-                                <span class="w-1.5 h-1.5 rounded-full <?= $isCatActive ? 'bg-[#bc944c]' : 'bg-stone-300' ?>"></span>
-                                <span><?= e($cat['name']) ?></span>
-                            </span>
-                            <span class="text-[10px] text-stone-400"><?= !empty($cat['product_count']) ? $cat['product_count'] . ' items' : '' ?></span>
+            <?php if (!empty($navMenuTree)): ?>
+                <?php foreach ($navMenuTree as $mIdx => $navItem): ?>
+                    <?php 
+                    $hasChildren = !empty($navItem['children']);
+                    $itemUrl = $formatNavUrl($navItem['url'] ?? '#');
+                    $isActive = $isNavActive($navItem['url'] ?? '');
+                    $targetAttr = (($navItem['target'] ?? '_self') === '_blank') ? ' target="_blank" rel="noopener"' : '';
+                    $iconColor = $isActive ? 'text-[#bc944c]' : 'text-stone-400';
+                    ?>
+                    <?php if ($hasChildren): ?>
+                        <div class="rounded-xl overflow-hidden border border-[#e7dec8] bg-white">
+                            <button type="button" onclick="document.getElementById('mobile-sub-<?= $mIdx ?>')?.classList.toggle('hidden'); document.getElementById('mobile-arrow-<?= $mIdx ?>')?.classList.toggle('rotate-180');" class="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-stone-800 hover:text-[#bc944c] transition-colors">
+                                <span class="flex items-center gap-3">
+                                    <?= $getNavIcon($navItem['title'], $navItem['url'] ?? '', $iconColor) ?>
+                                    <span><?= e($navItem['title']) ?></span>
+                                </span>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[10px] font-semibold bg-amber-50 text-[#bc944c] px-2 py-0.5 rounded-full"><?= count($navItem['children']) ?></span>
+                                    <svg id="mobile-arrow-<?= $mIdx ?>" class="w-3.5 h-3.5 text-stone-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
+                            </button>
+                            <div id="mobile-sub-<?= $mIdx ?>" class="hidden divide-y divide-[#f5efe4] border-t border-[#f0e9dc] bg-[#faf8f5]/60">
+                                <?php foreach ($navItem['children'] as $childItem): ?>
+                                    <?php 
+                                    $childUrl = $formatNavUrl($childItem['url'] ?? '#');
+                                    $isChildActive = $isNavActive($childItem['url'] ?? '');
+                                    $childTarget = (($childItem['target'] ?? '_self') === '_blank') ? ' target="_blank" rel="noopener"' : '';
+                                    ?>
+                                    <a href="<?= e($childUrl) ?>"<?= $childTarget ?> class="flex items-center justify-between px-4 py-2 text-xs transition-colors <?= $isChildActive ? 'font-bold text-[#bc944c] bg-amber-50/80' : 'text-stone-700 hover:text-[#07160d] hover:bg-white' ?>">
+                                        <span class="flex items-center gap-2.5">
+                                            <span class="w-1.5 h-1.5 rounded-full <?= $isChildActive ? 'bg-[#bc944c]' : 'bg-stone-300' ?>"></span>
+                                            <span><?= e($childItem['title']) ?></span>
+                                        </span>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <a href="<?= e($itemUrl) ?>"<?= $targetAttr ?> class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all <?= $isActive ? 'bg-[#07160d] text-white shadow-xs' : 'text-stone-800 hover:bg-white hover:text-[#bc944c]' ?>">
+                            <?= $getNavIcon($navItem['title'], $navItem['url'] ?? '', $isActive ? 'text-[#bc944c]' : 'text-stone-400') ?>
+                            <span><?= e($navItem['title']) ?></span>
                         </a>
-                    <?php endforeach; ?>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <!-- Fallback Navigation -->
+                <?php $isHome = is_active_path('/', true); ?>
+                <a href="<?= url('/') ?>" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all <?= $isHome ? 'bg-[#07160d] text-white shadow-xs' : 'text-stone-800 hover:bg-white hover:text-[#bc944c]' ?>">
+                    <svg class="w-4 h-4 <?= $isHome ? 'text-[#bc944c]' : 'text-stone-400' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    <span>Home</span>
+                </a>
+                <div class="rounded-xl overflow-hidden border border-[#e7dec8] bg-white">
+                    <button type="button" id="mobile-collections-toggle" class="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-stone-800 hover:text-[#bc944c] transition-colors">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                            <span>Collections</span>
+                        </span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] font-semibold bg-amber-50 text-[#bc944c] px-2 py-0.5 rounded-full"><?= count($categories) ?></span>
+                            <svg id="mobile-collections-arrow" class="w-3.5 h-3.5 text-stone-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                    </button>
+                    <div id="mobile-collections-list" class="hidden divide-y divide-[#f5efe4] border-t border-[#f0e9dc] bg-[#faf8f5]/60">
+                        <?php foreach ($categories as $cat): ?>
+                            <a href="<?= url('category/' . $cat['slug']) ?>" class="flex items-center justify-between px-4 py-2 text-xs text-stone-700 hover:text-[#07160d] hover:bg-white transition-colors">
+                                <span class="flex items-center gap-2.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-stone-300"></span>
+                                    <span><?= e($cat['name']) ?></span>
+                                </span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </div>
+                <a href="<?= url('about') ?>" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-stone-800 hover:bg-white hover:text-[#bc944c]">
+                    <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    <span>Our Story & Heritage</span>
+                </a>
+                <a href="<?= url('contact') ?>" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-stone-800 hover:bg-white hover:text-[#bc944c]">
+                    <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    <span>Contact Us</span>
+                </a>
+            <?php endif; ?>
+
+            <div class="border-t border-[#f0e9dc] my-2 pt-1"></div>
 
             <!-- Wishlist -->
             <?php $isWishlist = is_active_path('wishlist'); ?>
@@ -330,24 +452,6 @@ $whatsappNumberClean = preg_replace('/[^0-9]/', '', $whatsappNumber);
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                 </svg>
                 <span><?= $authCheck ? 'Order History' : 'Track Order / Orders' ?></span>
-            </a>
-
-            <!-- About Us -->
-            <?php $isAbout = is_active_path('about'); ?>
-            <a href="<?= url('about') ?>" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all <?= $isAbout ? 'bg-[#07160d] text-white shadow-xs' : 'text-stone-800 hover:bg-white hover:text-[#bc944c]' ?>">
-                <svg class="w-4 h-4 <?= $isAbout ? 'text-[#bc944c]' : 'text-stone-400' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                </svg>
-                <span>Our Story & Heritage</span>
-            </a>
-
-            <!-- Contact Us -->
-            <?php $isContact = is_active_path('contact'); ?>
-            <a href="<?= url('contact') ?>" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all <?= $isContact ? 'bg-[#07160d] text-white shadow-xs' : 'text-stone-800 hover:bg-white hover:text-[#bc944c]' ?>">
-                <svg class="w-4 h-4 <?= $isContact ? 'text-[#bc944c]' : 'text-stone-400' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                </svg>
-                <span>Contact Us</span>
             </a>
         </nav>
     </div>

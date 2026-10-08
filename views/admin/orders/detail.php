@@ -99,7 +99,14 @@
                     <div class="text-xs space-y-2 text-[#fdf6e3]/80">
                         <div>
                             <span class="text-[#fdf6e3]/50">Customer Name:</span>
-                            <div class="font-semibold text-[#fdf6e3]"><?= e($order['customer_name']) ?></div>
+                            <div class="font-semibold text-[#fdf6e3] flex items-center justify-between">
+                                <span><?= e($order['customer_name']) ?></span>
+                                <?php if (!empty($order['user_id'])): ?>
+                                    <a href="<?= url('admin/customers/' . $order['user_id']) ?>" class="text-[10px] text-[#bc944c] hover:underline font-bold">
+                                        View Profile →
+                                    </a>
+                                <?php endif; ?>
+                            </div>
                         </div>
                         <div>
                             <span class="text-[#fdf6e3]/50">Email Address:</span>

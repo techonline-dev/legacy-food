@@ -98,17 +98,82 @@ class AdminProductController extends Controller {
             'meta_description' => sanitize($this->request->input('meta_description')),
         ]);
 
-        // Process default variant
-        Database::insert('product_variants', [
-            'product_id' => $productId,
-            'name' => 'Standard',
-            'sku' => $sku . '-STD',
-            'price' => (float)$this->request->input('base_price'),
-            'sale_price' => $this->request->input('sale_price') ? (float)$this->request->input('sale_price') : null,
-            'stock_quantity' => (int)$this->request->input('stock_quantity'),
-            'is_default' => 1,
-            'image' => $image
-        ]);
+        // Process variants (multiple)
+        $variantsInput = $this->request->input('variants');
+        $defaultVariantIndex = (int)$this->request->input('default_variant_index', 0);
+        $insertedVariants = 0;
+        
+        if (!empty($variantsInput) && is_array($variantsInput)) {
+            foreach ($variantsInput as $idx => $v) {
+                $vName = trim($v['name'] ?? '');
+                if ($vName === '') continue;
+                $vSku = trim($v['sku'] ?? '');
+                if ($vSku === '') {
+                    $vSku = $sku . '-' . strtoupper(substr(slugify($vName), 0, 8)) . '-' . ($idx + 1);
+                }
+                $vPrice = isset($v['price']) && $v['price'] !== '' ? (float)$v['price'] : (float)$this->request->input('base_price');
+                $vSalePrice = isset($v['sale_price']) && $v['sale_price'] !== '' ? (float)$v['sale_price'] : null;
+                $vStock = isset($v['stock_quantity']) && $v['stock_quantity'] !== '' ? (int)$v['stock_quantity'] : (int)$this->request->input('stock_quantity');
+                $vWeight = isset($v['weight_grams']) && $v['weight_grams'] !== '' ? (int)$v['weight_grams'] : null;
+                $isDef = ($idx === $defaultVariantIndex || (!empty($v['is_default']) && $insertedVariants === 0)) ? 1 : 0;
+
+                Database::insert('product_variants', [
+                    'product_id' => $productId,
+                    'name' => $vName,
+                    'sku' => $vSku,
+                    'price' => $vPrice,
+                    'sale_price' => $vSalePrice,
+                    'stock_quantity' => $vStock,
+                    'weight_grams' => $vWeight,
+                    'is_default' => $isDef,
+                    'image' => !empty($v['image']) ? $v['image'] : $image
+                ]);
+                $insertedVariants++;
+            }
+        }
+        
+        if ($insertedVariants === 0) {
+            // Process fallback default variant
+            Database::insert('product_variants', [
+                'product_id' => $productId,
+                'name' => 'Standard',
+                'sku' => $sku . '-STD',
+                'price' => (float)$this->request->input('base_price'),
+                'sale_price' => $this->request->input('sale_price') ? (float)$this->request->input('sale_price') : null,
+                'stock_quantity' => (int)$this->request->input('stock_quantity'),
+                'is_default' => 1,
+                'image' => $image
+            ]);
+        }
+
+        // Process Gallery Images (multiple uploads + URLs)
+        $gallerySort = 0;
+        if (isset($_FILES['gallery_files'])) {
+            $uploadedGallery = $this->handleMultipleUploads($_FILES['gallery_files']);
+            foreach ($uploadedGallery as $gUrl) {
+                Database::insert('product_images', [
+                    'product_id' => $productId,
+                    'image_url' => $gUrl,
+                    'alt_text' => $name,
+                    'sort_order' => $gallerySort++
+                ]);
+            }
+        }
+        $galleryUrls = $this->request->input('gallery_urls');
+        if (!empty($galleryUrls)) {
+            $urlsList = is_array($galleryUrls) ? $galleryUrls : preg_split('/[\r\n]+/', (string)$galleryUrls);
+            foreach ($urlsList as $urlItem) {
+                $urlItem = trim($urlItem);
+                if (filter_var($urlItem, FILTER_VALIDATE_URL)) {
+                    Database::insert('product_images', [
+                        'product_id' => $productId,
+                        'image_url' => $urlItem,
+                        'alt_text' => $name,
+                        'sort_order' => $gallerySort++
+                    ]);
+                }
+            }
+        }
 
         ActivityLog::log('product_created', "Created product {$name} (ID #{$productId})");
         flash('success', "Product '{$name}' created successfully.");
@@ -125,12 +190,14 @@ class AdminProductController extends Controller {
 
         $categories = Category::all('name ASC');
         $variants = Product::getVariants($id);
+        $images = Database::fetchAll("SELECT * FROM `product_images` WHERE `product_id` = :pid ORDER BY `sort_order` ASC, `id` ASC", ['pid' => $id]);
 
         $this->view('admin.products.edit', [
             'meta_title' => "Edit Product: {$product['name']} | Legacy Food Admin",
             'product' => $product,
             'categories' => $categories,
             'variants' => $variants,
+            'images' => $images,
         ], 'admin');
     }
 
@@ -190,8 +257,146 @@ class AdminProductController extends Controller {
             'meta_description' => sanitize($this->request->input('meta_description')),
         ], "`id` = :id", ['id' => $id]);
 
+        // Variants processing in update
+        $variantsInput = $this->request->input('variants');
+        $defaultVariantId = (int)$this->request->input('default_variant_id', 0);
+        $deletedVariantIds = $this->request->input('deleted_variant_ids');
+        if (!empty($deletedVariantIds)) {
+            $delIds = is_array($deletedVariantIds) ? $deletedVariantIds : explode(',', (string)$deletedVariantIds);
+            foreach ($delIds as $delId) {
+                $delId = (int)$delId;
+                if ($delId > 0) {
+                    Database::query("DELETE FROM `product_variants` WHERE `id` = :id AND `product_id` = :pid", [
+                        'id' => $delId,
+                        'pid' => $id
+                    ]);
+                }
+            }
+        }
+
+        if (!empty($variantsInput) && is_array($variantsInput)) {
+            foreach ($variantsInput as $idx => $v) {
+                $vName = trim($v['name'] ?? '');
+                if ($vName === '') continue;
+                $vId = isset($v['id']) && is_numeric($v['id']) && (int)$v['id'] > 0 ? (int)$v['id'] : null;
+                $vSku = trim($v['sku'] ?? '');
+                if ($vSku === '') {
+                    $vSku = sanitize($this->request->input('sku')) . '-' . strtoupper(substr(slugify($vName), 0, 8)) . '-' . ($idx + 1);
+                }
+                $vPrice = isset($v['price']) && $v['price'] !== '' ? (float)$v['price'] : (float)$this->request->input('base_price');
+                $vSalePrice = (isset($v['sale_price']) && $v['sale_price'] !== '') ? (float)$v['sale_price'] : null;
+                $vStock = isset($v['stock_quantity']) && $v['stock_quantity'] !== '' ? (int)$v['stock_quantity'] : (int)$this->request->input('stock_quantity');
+                $vWeight = (isset($v['weight_grams']) && $v['weight_grams'] !== '') ? (int)$v['weight_grams'] : null;
+                $isDef = (($vId && $vId === $defaultVariantId) || (!empty($v['is_default']))) ? 1 : 0;
+
+                if ($vId) {
+                    Database::update('product_variants', [
+                        'name' => $vName,
+                        'sku' => $vSku,
+                        'price' => $vPrice,
+                        'sale_price' => $vSalePrice,
+                        'stock_quantity' => $vStock,
+                        'weight_grams' => $vWeight,
+                        'is_default' => $isDef,
+                    ], "`id` = :id AND `product_id` = :pid", ['id' => $vId, 'pid' => $id]);
+                } else {
+                    Database::insert('product_variants', [
+                        'product_id' => $id,
+                        'name' => $vName,
+                        'sku' => $vSku,
+                        'price' => $vPrice,
+                        'sale_price' => $vSalePrice,
+                        'stock_quantity' => $vStock,
+                        'weight_grams' => $vWeight,
+                        'is_default' => $isDef,
+                        'image' => !empty($v['image']) ? $v['image'] : $image
+                    ]);
+                }
+            }
+        }
+
+        // Ensure at least one variant is marked as default
+        $hasDefault = Database::fetch("SELECT id FROM `product_variants` WHERE `product_id` = :pid AND `is_default` = 1 LIMIT 1", ['pid' => $id]);
+        if (!$hasDefault) {
+            $firstVariant = Database::fetch("SELECT id FROM `product_variants` WHERE `product_id` = :pid ORDER BY id ASC LIMIT 1", ['pid' => $id]);
+            if ($firstVariant) {
+                Database::update('product_variants', ['is_default' => 1], "`id` = :id", ['id' => $firstVariant['id']]);
+            }
+        }
+
+        // Handle gallery images uploads in update
+        $existingCount = (int)(Database::fetch("SELECT COUNT(*) as c FROM `product_images` WHERE `product_id` = :pid", ['pid' => $id])['c'] ?? 0);
+        $gallerySort = $existingCount;
+        if (isset($_FILES['gallery_files'])) {
+            $uploadedGallery = $this->handleMultipleUploads($_FILES['gallery_files']);
+            foreach ($uploadedGallery as $gUrl) {
+                Database::insert('product_images', [
+                    'product_id' => $id,
+                    'image_url' => $gUrl,
+                    'alt_text' => $name,
+                    'sort_order' => $gallerySort++
+                ]);
+            }
+        }
+        $galleryUrls = $this->request->input('gallery_urls');
+        if (!empty($galleryUrls)) {
+            $urlsList = is_array($galleryUrls) ? $galleryUrls : preg_split('/[\r\n]+/', (string)$galleryUrls);
+            foreach ($urlsList as $urlItem) {
+                $urlItem = trim($urlItem);
+                if (filter_var($urlItem, FILTER_VALIDATE_URL)) {
+                    Database::insert('product_images', [
+                        'product_id' => $id,
+                        'image_url' => $urlItem,
+                        'alt_text' => $name,
+                        'sort_order' => $gallerySort++
+                    ]);
+                }
+            }
+        }
+        $deletedImageIds = $this->request->input('deleted_image_ids');
+        if (!empty($deletedImageIds)) {
+            $delImgIds = is_array($deletedImageIds) ? $deletedImageIds : explode(',', (string)$deletedImageIds);
+            foreach ($delImgIds as $imgId) {
+                $imgId = (int)$imgId;
+                if ($imgId > 0) {
+                    Database::query("DELETE FROM `product_images` WHERE `id` = :id AND `product_id` = :pid", [
+                        'id' => $imgId,
+                        'pid' => $id
+                    ]);
+                }
+            }
+        }
+
         ActivityLog::log('product_updated', "Updated product {$name} (ID #{$id})");
         flash('success', "Product '{$name}' updated successfully.");
+        $this->redirect('admin/products/edit/' . $id);
+    }
+
+    public function deleteImage(int $id): void {
+        $img = Database::fetch("SELECT * FROM `product_images` WHERE `id` = :id", ['id' => $id]);
+        if ($img) {
+            Database::query("DELETE FROM `product_images` WHERE `id` = :id", ['id' => $id]);
+            flash('success', 'Gallery image removed.');
+            $this->redirect('admin/products/edit/' . $img['product_id']);
+            return;
+        }
+        $this->redirect('admin/products');
+    }
+
+    public function deleteVariant(int $id): void {
+        $variant = Database::fetch("SELECT * FROM `product_variants` WHERE `id` = :id", ['id' => $id]);
+        if ($variant) {
+            $count = Database::fetch("SELECT COUNT(*) as c FROM `product_variants` WHERE `product_id` = :pid", ['pid' => $variant['product_id']])['c'];
+            if ((int)$count <= 1) {
+                flash('error', 'A product must have at least one variant.');
+                $this->redirect('admin/products/edit/' . $variant['product_id']);
+                return;
+            }
+            Database::query("DELETE FROM `product_variants` WHERE `id` = :id", ['id' => $id]);
+            flash('success', 'Variant removed.');
+            $this->redirect('admin/products/edit/' . $variant['product_id']);
+            return;
+        }
         $this->redirect('admin/products');
     }
 
@@ -222,5 +427,33 @@ class AdminProductController extends Controller {
             return url('assets/images/products/' . $filename);
         }
         return null;
+    }
+
+    private function handleMultipleUploads(array $files): array {
+        $uploadedUrls = [];
+        if (!isset($files['name']) || !is_array($files['name'])) {
+            return $uploadedUrls;
+        }
+
+        $targetDir = __DIR__ . '/../../public/assets/images/products/';
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0755, true);
+        }
+
+        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+        $count = count($files['name']);
+
+        for ($i = 0; $i < $count; $i++) {
+            if ($files['error'][$i] === UPLOAD_ERR_OK && in_array($files['type'][$i], $allowed)) {
+                $ext = pathinfo($files['name'][$i], PATHINFO_EXTENSION);
+                $filename = 'gallery_' . uniqid() . '.' . $ext;
+                $dest = $targetDir . $filename;
+                if (move_uploaded_file($files['tmp_name'][$i], $dest)) {
+                    $uploadedUrls[] = url('assets/images/products/' . $filename);
+                }
+            }
+        }
+
+        return $uploadedUrls;
     }
 }

@@ -11,13 +11,20 @@ $gtmId = Setting::get('google_tag_manager_id');
 $twitterHandle = Setting::get('twitter_handle', '@legacyfood');
 $canonicalBase = Setting::get('canonical_url_base');
 
-$pageTitle = $meta_title ?? $defaultTitle;
-$pageDescription = $meta_description ?? $defaultDesc;
-$pageKeywords = $meta_keywords ?? $defaultKeywords;
+$requestPath = $_SERVER['REQUEST_URI'] ?? '/';
+$cleanPath = trim((string)parse_url($requestPath, PHP_URL_PATH), '/');
+$staticKey = $cleanPath === '' ? 'home' : strtolower(str_replace(['/', '-'], '_', $cleanPath));
+
+$overrideTitle = Setting::get("seo_page_{$staticKey}_title");
+$overrideDesc = Setting::get("seo_page_{$staticKey}_desc");
+$overrideKeywords = Setting::get("seo_page_{$staticKey}_keywords");
+
+$pageTitle = $overrideTitle ?: ($meta_title ?? $defaultTitle);
+$pageDescription = $overrideDesc ?: ($meta_description ?? $defaultDesc);
+$pageKeywords = $overrideKeywords ?: ($meta_keywords ?? $defaultKeywords);
 $pageRobots = $meta_robots ?? $defaultRobots;
 $pageOgImage = $og_image ?? $defaultOgImage;
 
-$requestPath = $_SERVER['REQUEST_URI'] ?? '/';
 $canonicalUrl = $canonicalBase ? rtrim($canonicalBase, '/') . $requestPath : url($requestPath);
 ?>
 <!DOCTYPE html>

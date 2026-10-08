@@ -1,4 +1,6 @@
 <?php
+use App\Models\Setting;
+
 $cartSummary = \App\Models\Cart::getSummary();
 $cartCount = $cartSummary['items_count'];
 $wishlistCount = \App\Core\Auth::check() ? \App\Models\Wishlist::getCount(\App\Core\Auth::id()) : 0;
@@ -7,16 +9,30 @@ $authUser = \App\Core\Auth::user();
 $authCheck = !empty($authUser);
 $authName = $authUser['name'] ?? ($_SESSION['user_name'] ?? '');
 $firstName = !empty($authName) ? explode(' ', trim($authName))[0] : 'Account';
+
+// Editable Header Settings
+$announcementEnabled = Setting::get('header_announcement_enabled', '1');
+$announcementText = Setting::get('header_announcement_text', 'Hand-Churned Farm Ghee · Lab Tested Purity · <strong class="text-white">FREE Shipping</strong> on Orders Above ₹999');
+$headerLogoUrl = Setting::get('header_logo_url', '');
+if (empty($headerLogoUrl)) {
+    $headerLogoUrl = asset('assets/images/branding/header-logo-dark.svg');
+}
+$showWhatsapp = Setting::get('header_show_whatsapp', '1');
+$whatsappText = Setting::get('header_whatsapp_text', 'Order on WhatsApp');
+$whatsappNumber = Setting::get('whatsapp_number', '919845279936');
+$whatsappNumberClean = preg_replace('/[^0-9]/', '', $whatsappNumber);
 ?>
 
 <header id="site-header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-white/95 backdrop-blur-md border-b border-[#e7dec8] shadow-sm">
+    <?php if ($announcementEnabled == '1' || $announcementEnabled === true): ?>
     <!-- Top Announcement Bar -->
     <div class="bg-[#07160d] text-[#d8bd99] py-1.5 px-4 text-center border-b border-[#bc944c]/20">
         <p class="text-[11px] md:text-xs font-body tracking-wider flex items-center justify-center gap-2">
             <span class="inline-block w-2 h-2 rounded-full bg-[#bc944c] animate-pulse"></span>
-            <span>Hand-Churned Farm Ghee · Lab Tested Purity · <strong class="text-white">FREE Shipping</strong> on Orders Above ₹999</span>
+            <span><?= $announcementText ?></span>
         </p>
     </div>
+    <?php endif; ?>
 
     <!-- Main Navigation Bar -->
     <div class="container-x">
@@ -30,7 +46,7 @@ $firstName = !empty($authName) ? explode(' ', trim($authName))[0] : 'Account';
 
             <!-- Brand Logo -->
             <a href="<?= url('/') ?>" class="flex items-center gap-3 transition-transform hover:scale-[1.02]">
-                <img src="<?= asset('assets/images/branding/header-logo-dark.svg') ?>" alt="Legacy Food" class="h-10 md:h-12 w-auto">
+                <img src="<?= e($headerLogoUrl) ?>" alt="Legacy Food" class="h-10 md:h-12 w-auto">
             </a>
 
             <!-- Desktop Nav Links -->
@@ -85,10 +101,12 @@ $firstName = !empty($authName) ? explode(' ', trim($authName))[0] : 'Account';
 
             <!-- Account, Wishlist, Cart, WhatsApp Actions -->
             <div class="flex items-center gap-2 md:gap-4">
+                <?php if ($showWhatsapp == '1' || $showWhatsapp === true): ?>
                 <!-- WhatsApp Quick Order -->
-                <a href="https://wa.me/919845279936?text=<?= urlencode('Hi Legacy, I would like to order ghee') ?>" target="_blank" rel="noopener" class="hidden md:inline-flex btn-gold text-xs py-2 px-4 shadow-sm">
-                    <span>Order on WhatsApp</span>
+                <a href="https://wa.me/<?= e($whatsappNumberClean) ?>?text=<?= urlencode('Hi Legacy, I would like to order ghee') ?>" target="_blank" rel="noopener" class="hidden md:inline-flex btn-gold text-xs py-2 px-4 shadow-sm">
+                    <span><?= e($whatsappText) ?></span>
                 </a>
+                <?php endif; ?>
 
                 <!-- Account / User Profile -->
                 <?php $isAccount = is_active_path(['account', 'login', 'register']); ?>
@@ -192,7 +210,7 @@ $firstName = !empty($authName) ? explode(' ', trim($authName))[0] : 'Account';
     <!-- Top Header Bar inside Drawer -->
     <div class="px-5 py-4 bg-white border-b border-[#e7dec8] flex items-center justify-between shrink-0 shadow-xs">
         <a href="<?= url('/') ?>" class="flex items-center gap-2" aria-label="Legacy Food">
-            <img src="<?= asset('assets/images/branding/header-logo-dark.svg') ?>" class="h-8 w-auto" alt="Legacy Food">
+            <img src="<?= e($headerLogoUrl) ?>" class="h-8 w-auto" alt="Legacy Food">
         </a>
         <button id="mobile-menu-close" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-[#07160d] text-stone-500 hover:text-white flex items-center justify-center transition-all duration-200" aria-label="Close navigation menu">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -336,12 +354,14 @@ $firstName = !empty($authName) ? explode(' ', trim($authName))[0] : 'Account';
 
     <!-- Drawer Footer Actions -->
     <div class="p-4 border-t border-[#e7dec8] bg-white space-y-2.5 shrink-0 shadow-xs">
-        <a href="https://wa.me/919845279936" target="_blank" rel="noopener" class="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold shadow-xs transition-transform active:scale-95">
+        <?php if ($showWhatsapp == '1' || $showWhatsapp === true): ?>
+        <a href="https://wa.me/<?= e($whatsappNumberClean) ?>" target="_blank" rel="noopener" class="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold shadow-xs transition-transform active:scale-95">
             <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.969.541 1.769.819 2.796.819 3.18 0 5.767-2.587 5.767-5.766.001-3.182-2.585-5.806-5.767-5.806zm0 10.455c-.908 0-1.745-.252-2.463-.717l-.176-.104-1.83.479.489-1.782-.115-.184c-.512-.816-.782-1.637-.781-2.365.001-2.569 2.091-4.659 4.876-4.659 2.784 0 4.658 2.089 4.658 4.659 0 2.57-1.874 4.669-4.658 4.669z"/>
             </svg>
-            <span>Order on WhatsApp</span>
+            <span><?= e($whatsappText) ?></span>
         </a>
+        <?php endif; ?>
         <div class="text-center">
             <p class="text-[10px] text-stone-400 font-medium">✦ 100% Bilona Churned · Lab Tested Pure ✦</p>
         </div>

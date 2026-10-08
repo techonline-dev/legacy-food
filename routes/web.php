@@ -96,6 +96,8 @@ $router->group(['middleware' => [AdminMiddleware::class]], function(Router $r) {
     $r->get('/admin/products/edit/{id}', 'Admin\AdminProductController@edit');
     $r->post('/admin/products/update/{id}', 'Admin\AdminProductController@update');
     $r->post('/admin/products/delete/{id}', 'Admin\AdminProductController@delete');
+    $r->post('/admin/products/delete-image/{id}', 'Admin\AdminProductController@deleteImage');
+    $r->post('/admin/products/delete-variant/{id}', 'Admin\AdminProductController@deleteVariant');
 
     // Categories
     $r->get('/admin/categories', 'Admin\AdminCategoryController@index');
@@ -115,6 +117,9 @@ $router->group(['middleware' => [AdminMiddleware::class]], function(Router $r) {
 
     // Customers
     $r->get('/admin/customers', 'Admin\AdminCustomerController@index');
+    $r->get('/admin/customers/{id}', 'Admin\AdminCustomerController@detail');
+    $r->post('/admin/customers/update/{id}', 'Admin\AdminCustomerController@update');
+    $r->post('/admin/customers/status/{id}', 'Admin\AdminCustomerController@updateStatus');
 
     // Coupons
     $r->get('/admin/coupons', 'Admin\AdminCouponController@index');
@@ -135,13 +140,14 @@ $router->group(['middleware' => [AdminMiddleware::class]], function(Router $r) {
     $r->post('/admin/banners/update/{id}', 'Admin\AdminBannerController@update');
     $r->post('/admin/banners/delete/{id}', 'Admin\AdminBannerController@delete');
 
-    // Pages (CMS)
+    // Pages (CMS & SEO)
     $r->get('/admin/pages', 'Admin\AdminPageController@index');
     $r->get('/admin/pages/create', 'Admin\AdminPageController@create');
     $r->post('/admin/pages/store', 'Admin\AdminPageController@store');
     $r->get('/admin/pages/edit/{id}', 'Admin\AdminPageController@edit');
     $r->post('/admin/pages/update/{id}', 'Admin\AdminPageController@update');
     $r->post('/admin/pages/delete/{id}', 'Admin\AdminPageController@delete');
+    $r->post('/admin/pages/update-seo', 'Admin\AdminPageController@updateSeo');
 
     // FAQs
     $r->get('/admin/faqs', 'Admin\AdminFaqController@index');

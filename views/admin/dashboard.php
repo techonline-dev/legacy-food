@@ -192,8 +192,8 @@
                                     <?= date('d M Y, h:i A', strtotime($order['created_at'])) ?>
                                 </td>
                                 <td class="p-3">
-                                    <div class="font-semibold text-[#07160d]"><?= e($order['customer_name']) ?></div>
-                                    <div class="text-[10px] text-stone-500"><?= e($order['customer_phone'] ?? $order['customer_email']) ?></div>
+                                    <div class="font-semibold text-[#07160d]"><?= e($order['customer_name'] ?? 'Customer') ?></div>
+                                    <div class="text-[10px] text-stone-500"><?= e($order['customer_phone'] ?? $order['customer_email'] ?? 'N/A') ?></div>
                                 </td>
                                 <td class="p-3">
                                     <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold <?= $order['payment_status'] === 'paid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200' ?>">

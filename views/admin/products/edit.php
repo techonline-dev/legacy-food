@@ -154,42 +154,96 @@
                     </div>
                 </div>
 
-                <!-- Existing Variants Overview -->
+                <!-- Product Variants Manager (Multiple) -->
                 <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-4">
                     <div class="flex items-center justify-between">
-                        <h2 class="font-display text-base font-bold text-[#07160d]">Product Variants (<?= count($variants) ?>)</h2>
+                        <div>
+                            <h2 class="font-display text-base font-bold text-[#07160d]">Product Variants (<?= count($variants) ?>)</h2>
+                            <p class="text-[11px] text-stone-500">Configure multiple size, volume or packaging options with individual prices & SKUs.</p>
+                        </div>
+                        <button type="button" id="btn-add-edit-variant" class="btn-ghost py-1.5 px-3 text-xs border border-[#bc944c] text-[#bc944c] hover:bg-[#bc944c] hover:text-[#07160d] font-bold rounded-lg transition-colors flex items-center gap-1.5">
+                            <span>+ Add Variant</span>
+                        </button>
                     </div>
 
-                    <?php if (empty($variants)): ?>
-                        <p class="text-xs text-stone-500">No sub-variants attached. Single standard size.</p>
-                    <?php else: ?>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs">
-                                <thead>
-                                    <tr class="border-b border-[#e7dec8] text-[#bc944c] uppercase tracking-wider text-[10px]">
-                                        <th class="pb-2 font-semibold">Variant Name</th>
-                                        <th class="pb-2 font-semibold">SKU</th>
-                                        <th class="pb-2 font-semibold">Price</th>
-                                        <th class="pb-2 font-semibold">Stock</th>
-                                        <th class="pb-2 font-semibold">Default</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-stone-100">
-                                    <?php foreach ($variants as $v): ?>
-                                        <tr>
-                                            <td class="py-2.5 font-semibold text-[#07160d]"><?= e($v['name']) ?></td>
-                                            <td class="py-2.5 font-mono text-[#bc944c]"><?= e($v['sku']) ?></td>
-                                            <td class="py-2.5 font-display font-semibold"><?= format_price($v['price']) ?></td>
-                                            <td class="py-2.5 text-stone-600"><?= (int)$v['stock_quantity'] ?> in stock</td>
+                    <input type="hidden" name="deleted_variant_ids" id="deleted_variant_ids" value="">
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs" id="edit-variants-table">
+                            <thead>
+                                <tr class="border-b border-[#e7dec8] text-[#bc944c] uppercase tracking-wider text-[10px]">
+                                    <th class="pb-2 font-semibold w-12 text-center">Primary</th>
+                                    <th class="pb-2 font-semibold">Variant Name *</th>
+                                    <th class="pb-2 font-semibold">SKU</th>
+                                    <th class="pb-2 font-semibold w-24">Price (₹) *</th>
+                                    <th class="pb-2 font-semibold w-24">Sale (₹)</th>
+                                    <th class="pb-2 font-semibold w-20">Stock</th>
+                                    <th class="pb-2 font-semibold w-20">Weight (g)</th>
+                                    <th class="pb-2 font-semibold w-10 text-center"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-stone-100" id="edit-variants-body">
+                                <?php if (!empty($variants)): ?>
+                                    <?php foreach ($variants as $idx => $v): ?>
+                                        <tr class="variant-row" data-id="<?= $v['id'] ?>">
+                                            <input type="hidden" name="variants[<?= $idx ?>][id]" value="<?= $v['id'] ?>">
+                                            <td class="py-2.5 text-center">
+                                                <input type="radio" name="default_variant_id" value="<?= $v['id'] ?>" <?= !empty($v['is_default']) ? 'checked' : '' ?> class="text-[#bc944c] focus:ring-[#bc944c]">
+                                            </td>
                                             <td class="py-2.5">
-                                                <?= !empty($v['is_default']) ? '<span class="text-emerald-700 font-bold">✓ Primary</span>' : '—' ?>
+                                                <input type="text" name="variants[<?= $idx ?>][name]" value="<?= e($v['name']) ?>" required class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                            </td>
+                                            <td class="py-2.5">
+                                                <input type="text" name="variants[<?= $idx ?>][sku]" value="<?= e($v['sku']) ?>" required class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs uppercase font-mono focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                            </td>
+                                            <td class="py-2.5">
+                                                <input type="number" step="0.01" name="variants[<?= $idx ?>][price]" value="<?= e($v['price']) ?>" required class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                            </td>
+                                            <td class="py-2.5">
+                                                <input type="number" step="0.01" name="variants[<?= $idx ?>][sale_price]" value="<?= e($v['sale_price'] ?? '') ?>" placeholder="None" class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                            </td>
+                                            <td class="py-2.5">
+                                                <input type="number" name="variants[<?= $idx ?>][stock_quantity]" value="<?= (int)$v['stock_quantity'] ?>" required class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                            </td>
+                                            <td class="py-2.5">
+                                                <input type="number" name="variants[<?= $idx ?>][weight_grams]" value="<?= e($v['weight_grams'] ?? '') ?>" placeholder="g" class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                            </td>
+                                            <td class="py-2.5 text-center">
+                                                <button type="button" class="btn-remove-edit-variant text-stone-400 hover:text-red-500 font-bold text-sm" data-id="<?= $v['id'] ?>" title="Remove Variant">×</button>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                                <?php else: ?>
+                                    <tr class="variant-row" data-id="0">
+                                        <td class="py-2.5 text-center">
+                                            <input type="radio" name="default_variant_id" value="0" checked class="text-[#bc944c] focus:ring-[#bc944c]">
+                                        </td>
+                                        <td class="py-2.5">
+                                            <input type="text" name="variants[0][name]" value="Standard" required class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                        </td>
+                                        <td class="py-2.5">
+                                            <input type="text" name="variants[0][sku]" value="<?= e($product['sku']) ?>-STD" required class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs uppercase font-mono focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                        </td>
+                                        <td class="py-2.5">
+                                            <input type="number" step="0.01" name="variants[0][price]" value="<?= e($product['base_price']) ?>" required class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                        </td>
+                                        <td class="py-2.5">
+                                            <input type="number" step="0.01" name="variants[0][sale_price]" value="<?= e($product['sale_price'] ?? '') ?>" class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                        </td>
+                                        <td class="py-2.5">
+                                            <input type="number" name="variants[0][stock_quantity]" value="<?= (int)$product['stock_quantity'] ?>" required class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                        </td>
+                                        <td class="py-2.5">
+                                            <input type="number" name="variants[0][weight_grams]" placeholder="g" class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                                        </td>
+                                        <td class="py-2.5 text-center">
+                                            <button type="button" class="btn-remove-edit-variant text-stone-400 hover:text-red-500 font-bold text-sm" data-id="0" title="Remove Variant">×</button>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- SEO Settings Card -->
@@ -245,27 +299,195 @@
 
                 <!-- Product Featured Media -->
                 <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-4">
-                    <h2 class="font-display text-base font-bold text-[#07160d]">Product Imagery</h2>
+                    <h2 class="font-display text-base font-bold text-[#07160d]">Primary Featured Image</h2>
 
                     <!-- Current Image Preview -->
-                    <div class="text-center p-4 bg-stone-50 rounded-xl border border-[#e7dec8]">
-                        <img src="<?= e($product['featured_image']) ?>" class="w-32 h-32 object-contain mx-auto rounded-lg bg-white p-2 border border-[#e7dec8]">
-                        <span class="text-[10px] text-stone-500 mt-2 block">Current Featured Image</span>
+                    <div class="text-center p-3 bg-stone-50 rounded-xl border border-[#e7dec8]" id="edit-feat-box">
+                        <img id="edit-feat-img" src="<?= e($product['featured_image']) ?>" class="w-28 h-28 object-contain mx-auto rounded-lg bg-white p-2 border border-[#e7dec8]">
+                        <span class="text-[10px] text-stone-500 mt-1.5 block">Current Image</span>
                     </div>
 
                     <div>
                         <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Image URL</label>
-                        <input type="url" name="featured_image" value="<?= e($product['featured_image']) ?>"
+                        <input type="url" id="edit_featured_image" name="featured_image" value="<?= e($product['featured_image']) ?>"
                                class="w-full py-2 px-3 rounded-xl bg-white border border-[#d6c7af] text-xs text-[#1c1917] focus:border-[#bc944c] focus:outline-none">
                     </div>
 
                     <div>
                         <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Replace with File</label>
-                        <input type="file" name="image_file" accept="image/*"
+                        <input type="file" id="edit_image_file" name="image_file" accept="image/*"
                                class="w-full text-xs text-stone-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#bc944c] file:text-[#07160d] hover:file:bg-[#d8bd99] cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Product Gallery Images (Multiple) -->
+                <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-display text-base font-bold text-[#07160d]">Product Gallery (<?= count($images ?? []) ?>)</h2>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#faf8f5] text-[#bc944c] border border-[#d6c7af] font-semibold">Gallery</span>
+                    </div>
+
+                    <!-- Existing Gallery Images -->
+                    <?php if (!empty($images)): ?>
+                        <div class="space-y-2">
+                            <label class="block text-[11px] font-semibold text-stone-600 uppercase tracking-wider">Current Gallery Images</label>
+                            <div class="grid grid-cols-3 gap-2.5">
+                                <?php foreach ($images as $img): ?>
+                                    <div class="relative group rounded-xl border border-[#d6c7af] bg-white p-1.5 overflow-hidden shadow-xs">
+                                        <img src="<?= e($img['image_url']) ?>" class="w-full h-16 object-contain rounded-lg">
+                                        <button type="button" class="btn-delete-gallery-img absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-xs opacity-90 hover:opacity-100 shadow-xs" data-id="<?= $img['id'] ?>" title="Delete image">×</button>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <input type="hidden" name="deleted_image_ids" id="deleted_image_ids" value="">
+
+                    <div class="pt-2 border-t border-stone-100 space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Upload More Gallery Images</label>
+                            <input type="file" id="edit_gallery_files" name="gallery_files[]" multiple accept="image/*"
+                                   class="w-full text-xs text-stone-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#bc944c] file:text-[#07160d] hover:file:bg-[#d8bd99] cursor-pointer">
+                            <div id="edit-gallery-preview" class="mt-2 flex flex-wrap gap-2 empty:hidden"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Or Paste Gallery Image URLs</label>
+                            <textarea name="gallery_urls" rows="2" placeholder="https://example.com/img1.jpg&#10;https://example.com/img2.jpg"
+                                      class="w-full py-2 px-3 rounded-xl bg-white border border-[#d6c7af] text-xs font-mono text-[#1c1917] focus:border-[#bc944c] focus:outline-none"></textarea>
+                            <p class="text-[10px] text-stone-400 mt-1">One URL per line.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Featured Image Preview
+    const featInput = document.getElementById('edit_featured_image');
+    const featFileInput = document.getElementById('edit_image_file');
+    const featPreview = document.getElementById('edit-feat-img');
+
+    if (featInput && featPreview) {
+        featInput.addEventListener('input', function() {
+            if (this.value.trim()) {
+                featPreview.src = this.value.trim();
+            }
+        });
+    }
+
+    if (featFileInput && featPreview) {
+        featFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    featPreview.src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Gallery Files Preview
+    const galleryInput = document.getElementById('edit_gallery_files');
+    const galleryPreview = document.getElementById('edit-gallery-preview');
+    if (galleryInput && galleryPreview) {
+        galleryInput.addEventListener('change', function(e) {
+            galleryPreview.innerHTML = '';
+            Array.from(e.target.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const thumb = document.createElement('div');
+                    thumb.className = 'w-14 h-14 rounded-lg border border-[#d6c7af] bg-white p-1 overflow-hidden shadow-xs';
+                    thumb.innerHTML = `<img src="${evt.target.result}" class="w-full h-full object-contain">`;
+                    galleryPreview.appendChild(thumb);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+    }
+
+    // Delete existing gallery images
+    const deletedImageIdsInput = document.getElementById('deleted_image_ids');
+    let deletedImageIds = [];
+    document.querySelectorAll('.btn-delete-gallery-img').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const imgId = this.dataset.id;
+            if (confirm('Delete this gallery image?')) {
+                deletedImageIds.push(imgId);
+                deletedImageIdsInput.value = deletedImageIds.join(',');
+                this.closest('.relative').remove();
+            }
+        });
+    });
+
+    // Dynamic Variant Rows for Edit
+    const btnAddVariant = document.getElementById('btn-add-edit-variant');
+    const variantsBody = document.getElementById('edit-variants-body');
+    const deletedVariantIdsInput = document.getElementById('deleted_variant_ids');
+    let deletedVariantIds = [];
+    let newVariantIndex = 1000;
+
+    if (btnAddVariant && variantsBody) {
+        btnAddVariant.addEventListener('click', function() {
+            const tr = document.createElement('tr');
+            tr.className = 'variant-row';
+            tr.dataset.id = 'new_' + newVariantIndex;
+            tr.innerHTML = `
+                <td class="py-2.5 text-center">
+                    <input type="radio" name="default_variant_id" value="new_${newVariantIndex}" class="text-[#bc944c] focus:ring-[#bc944c]">
+                </td>
+                <td class="py-2.5">
+                    <input type="text" name="variants[${newVariantIndex}][name]" placeholder="e.g. 1 Litre" required class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                </td>
+                <td class="py-2.5">
+                    <input type="text" name="variants[${newVariantIndex}][sku]" placeholder="Auto" class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs uppercase font-mono focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                </td>
+                <td class="py-2.5">
+                    <input type="number" step="0.01" name="variants[${newVariantIndex}][price]" placeholder="1850" required class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                </td>
+                <td class="py-2.5">
+                    <input type="number" step="0.01" name="variants[${newVariantIndex}][sale_price]" placeholder="1599" class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                </td>
+                <td class="py-2.5">
+                    <input type="number" name="variants[${newVariantIndex}][stock_quantity]" value="50" class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                </td>
+                <td class="py-2.5">
+                    <input type="number" name="variants[${newVariantIndex}][weight_grams]" placeholder="1000" class="w-full py-1.5 px-2 rounded-lg bg-stone-50 border border-stone-200 text-xs focus:bg-white focus:border-[#bc944c] focus:outline-none">
+                </td>
+                <td class="py-2.5 text-center">
+                    <button type="button" class="btn-remove-edit-variant text-stone-400 hover:text-red-500 font-bold text-sm" data-id="new_${newVariantIndex}" title="Remove Variant">×</button>
+                </td>
+            `;
+            variantsBody.appendChild(tr);
+            newVariantIndex++;
+        });
+
+        variantsBody.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('btn-remove-edit-variant')) {
+                const tr = e.target.closest('tr');
+                const rowId = e.target.dataset.id;
+                const rows = variantsBody.querySelectorAll('.variant-row');
+                if (rows.length <= 1) {
+                    alert('You must have at least one variant.');
+                    return;
+                }
+                if (rowId && !rowId.startsWith('new_') && rowId !== '0') {
+                    if (confirm('Delete this variant?')) {
+                        deletedVariantIds.push(rowId);
+                        deletedVariantIdsInput.value = deletedVariantIds.join(',');
+                        tr.remove();
+                    }
+                } else {
+                    tr.remove();
+                }
+            }
+        });
+    }
+});
+</script>

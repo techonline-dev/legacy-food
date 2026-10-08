@@ -7,12 +7,34 @@ $tax = $settings['tax'] ?? [];
 $pay = $settings['payment'] ?? [];
 $seo = $settings['seo'] ?? [];
 $social = $settings['social'] ?? [];
+$header = $settings['header'] ?? [];
+$footer = $settings['footer'] ?? [];
 
 $gstNumber = $tax['gst_number'] ?? ($contact['gst_number'] ?? '29ABCDE1234F1Z5');
 $gstPercentage = $tax['gst_percentage'] ?? '5.00';
 $taxInclusive = $tax['tax_inclusive'] ?? '1';
 $defaultHsn = $tax['default_hsn_code'] ?? '04059020';
 $gstState = $tax['gst_state'] ?? '29 - Karnataka';
+
+// Header settings variables
+$headerAnnouncementEnabled = $header['header_announcement_enabled'] ?? '1';
+$headerAnnouncementText = $header['header_announcement_text'] ?? 'Hand-Churned Farm Ghee · Lab Tested Purity · <strong class="text-white">FREE Shipping</strong> on Orders Above ₹999';
+$headerLogoUrl = $header['header_logo_url'] ?? '';
+$headerShowWhatsapp = $header['header_show_whatsapp'] ?? '1';
+$headerWhatsappText = $header['header_whatsapp_text'] ?? 'Order on WhatsApp';
+
+// Footer settings variables
+$footerLogoUrl = $footer['footer_logo_url'] ?? '';
+$footerAboutText = $footer['footer_about_text'] ?? 'Rooted in purity and craftsmanship. Hand-churned South Indian butter ghee and cold-pressed oils prepared the traditional way. 100% lab certified, zero adulteration.';
+$footerCol2Title = $footer['footer_col2_title'] ?? 'Our Heritage';
+$footerCol3Title = $footer['footer_col3_title'] ?? 'Company & Support';
+$footerNewsletterEnabled = $footer['footer_newsletter_enabled'] ?? '1';
+$footerNewsletterTitle = $footer['footer_newsletter_title'] ?? 'Stay Connected';
+$footerNewsletterDesc = $footer['footer_newsletter_desc'] ?? 'Subscribe for seasonal harvest announcements, festive offers and culinary secrets.';
+$footerContactPhone = $footer['footer_contact_phone'] ?? ($contact['contact_phone'] ?? '+91 81234 50509');
+$footerContactEmail = $footer['footer_contact_email'] ?? ($contact['contact_email'] ?? 'Contact@legacyfood.in');
+$footerCopyrightText = $footer['footer_copyright_text'] ?? '© {year} Legacy Food. All rights reserved. Crafted in South India.';
+$footerBadgesText = $footer['footer_badges_text'] ?? '100% NABL Accredited Lab Verified • FSSAI Compliant';
 ?>
 
 <div class="space-y-6 max-w-5xl mx-auto">
@@ -20,7 +42,7 @@ $gstState = $tax['gst_state'] ?? '29 - Karnataka';
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h1 class="font-display text-2xl sm:text-3xl font-bold text-[#07160d]">Store Configuration & Settings</h1>
-            <p class="text-xs text-stone-500 mt-1">Configure business identity, GST tax slabs, payment gateways, and shipping rates.</p>
+            <p class="text-xs text-stone-500 mt-1">Configure business identity, header, footer, GST tax slabs, payment gateways, and shipping rates.</p>
         </div>
     </div>
 
@@ -33,6 +55,12 @@ $gstState = $tax['gst_state'] ?? '29 - Karnataka';
                 <span class="flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg>
                     Taxes & GST (Settings)
+                </span>
+            </button>
+            <button type="button" class="tab-btn px-4 py-2.5 rounded-xl text-stone-600 hover:bg-stone-100 hover:text-[#07160d] transition-colors" data-target="tab-header-footer">
+                <span class="flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+                    Header & Footer
                 </span>
             </button>
             <button type="button" class="tab-btn px-4 py-2.5 rounded-xl text-stone-600 hover:bg-stone-100 hover:text-[#07160d] transition-colors" data-target="tab-general">General & Contact</button>
@@ -431,6 +459,242 @@ $gstState = $tax['gst_state'] ?? '29 - Karnataka';
                         <input type="text" name="twitter_handle" value="<?= e($social['twitter_handle'] ?? '') ?>"
                                placeholder="@legacyfood"
                                class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-xs text-[#1c1917] focus:border-[#bc944c] focus:outline-none">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Header & Footer -->
+        <div class="tab-pane hidden space-y-6" id="tab-header-footer">
+            <!-- Header Configuration Card -->
+            <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-6">
+                <div class="border-b border-[#e7dec8] pb-4">
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                        Header Controls
+                    </div>
+                    <h2 class="font-display text-lg font-bold text-[#07160d]">Header & Announcement Bar</h2>
+                    <p class="text-xs text-stone-500 mt-0.5">Customize top announcement notification bar, header logo, and WhatsApp quick action button.</p>
+                </div>
+
+                <div class="space-y-5">
+                    <!-- Announcement Bar Toggle -->
+                    <div class="flex items-center justify-between p-4 rounded-xl bg-stone-50 border border-[#e7dec8]">
+                        <div>
+                            <label for="header_announcement_enabled" class="text-xs font-bold text-[#07160d] block cursor-pointer">Enable Top Announcement Bar</label>
+                            <p class="text-[11px] text-stone-500 mt-0.5">Show or hide the promo banner strip displayed above the navigation header.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="header_announcement_enabled" name="header_announcement_enabled" value="1" <?= ($headerAnnouncementEnabled == '1' || $headerAnnouncementEnabled === true) ? 'checked' : '' ?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#bc944c]"></div>
+                        </label>
+                    </div>
+
+                    <!-- Announcement Bar Text -->
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Announcement Bar Content (Supports HTML)</label>
+                        <input type="text" name="header_announcement_text" value="<?= e($headerAnnouncementText) ?>"
+                               placeholder="Hand-Churned Farm Ghee · Lab Tested Purity · <strong class=&quot;text-white&quot;>FREE Shipping</strong> on Orders Above ₹999"
+                               class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                        <p class="text-[11px] text-stone-500 mt-1">HTML tags like <code>&lt;strong class="text-white"&gt;</code> and <code>&lt;span&gt;</code> are supported for highlighted text.</p>
+                    </div>
+
+                    <!-- Header Logo URL -->
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Header Brand Logo URL</label>
+                        <input type="text" name="header_logo_url" value="<?= e($headerLogoUrl) ?>"
+                               placeholder="e.g. /assets/images/branding/header-logo-dark.svg or https://example.com/logo.png"
+                               class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                        <p class="text-[11px] text-stone-500 mt-1">Leave empty to use the default dark brand logo (<code>assets/images/branding/header-logo-dark.svg</code>).</p>
+                    </div>
+
+                    <!-- WhatsApp Quick Order Button in Header -->
+                    <div class="pt-4 border-t border-[#e7dec8] space-y-4">
+                        <div class="flex items-center justify-between p-4 rounded-xl bg-stone-50 border border-[#e7dec8]">
+                            <div>
+                                <label for="header_show_whatsapp" class="text-xs font-bold text-[#07160d] block cursor-pointer">Show WhatsApp Order Button in Header</label>
+                                <p class="text-[11px] text-stone-500 mt-0.5">Displays a quick-order button in desktop navigation and mobile drawer.</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="header_show_whatsapp" name="header_show_whatsapp" value="1" <?= ($headerShowWhatsapp == '1' || $headerShowWhatsapp === true) ? 'checked' : '' ?> class="sr-only peer">
+                                <div class="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#bc944c]"></div>
+                            </label>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">WhatsApp Button Text</label>
+                                <input type="text" name="header_whatsapp_text" value="<?= e($headerWhatsappText) ?>"
+                                       placeholder="Order on WhatsApp"
+                                       class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">WhatsApp Number (with Country Code)</label>
+                                <input type="text" name="whatsapp_number" value="<?= e($contact['whatsapp_number'] ?? '919845279936') ?>"
+                                       placeholder="919845279936"
+                                       class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm font-mono text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                                <p class="text-[11px] text-stone-500 mt-1">Country code without plus sign (e.g., 919845279936 for India).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Branding & Bio Card -->
+            <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-6">
+                <div class="border-b border-[#e7dec8] pb-4">
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                        Footer Branding
+                    </div>
+                    <h2 class="font-display text-lg font-bold text-[#07160d]">Footer Identity & About Text</h2>
+                    <p class="text-xs text-stone-500 mt-0.5">Customize the brand logo, story snippet, and column titles shown in the dark footer.</p>
+                </div>
+
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Footer Brand Logo URL (Light / Gold Variant)</label>
+                        <input type="text" name="footer_logo_url" value="<?= e($footerLogoUrl) ?>"
+                               placeholder="e.g. /assets/images/branding/header-logo-light.svg"
+                               class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                        <p class="text-[11px] text-stone-500 mt-1">Leave empty to use the light logo (<code>assets/images/branding/header-logo-light.svg</code>) suitable for the dark background.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Footer About / Bio Paragraph</label>
+                        <textarea name="footer_about_text" rows="3"
+                                  class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]"><?= e($footerAboutText) ?></textarea>
+                        <p class="text-[11px] text-stone-500 mt-1">Short bio shown directly below the logo in the first column of the footer.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Column 2 Heading</label>
+                            <input type="text" name="footer_col2_title" value="<?= e($footerCol2Title) ?>"
+                                   placeholder="Our Heritage"
+                                   class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                            <p class="text-[11px] text-stone-500 mt-1">Default: "Our Heritage" (Products navigation list).</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Column 3 Heading</label>
+                            <input type="text" name="footer_col3_title" value="<?= e($footerCol3Title) ?>"
+                                   placeholder="Company & Support"
+                                   class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                            <p class="text-[11px] text-stone-500 mt-1">Default: "Company & Support" (Information & policy links).</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Newsletter & Contact Card -->
+            <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-6">
+                <div class="border-b border-[#e7dec8] pb-4">
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                        Stay Connected & Support
+                    </div>
+                    <h2 class="font-display text-lg font-bold text-[#07160d]">Footer Newsletter & Direct Contact</h2>
+                    <p class="text-xs text-stone-500 mt-0.5">Configure the email subscription block and support phone / email displayed in the footer.</p>
+                </div>
+
+                <div class="space-y-5">
+                    <!-- Newsletter Toggle -->
+                    <div class="flex items-center justify-between p-4 rounded-xl bg-stone-50 border border-[#e7dec8]">
+                        <div>
+                            <label for="footer_newsletter_enabled" class="text-xs font-bold text-[#07160d] block cursor-pointer">Enable Newsletter Subscription Form</label>
+                            <p class="text-[11px] text-stone-500 mt-0.5">Show or hide the email subscription form in column 4.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="footer_newsletter_enabled" name="footer_newsletter_enabled" value="1" <?= ($footerNewsletterEnabled == '1' || $footerNewsletterEnabled === true) ? 'checked' : '' ?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#bc944c]"></div>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Newsletter Title</label>
+                            <input type="text" name="footer_newsletter_title" value="<?= e($footerNewsletterTitle) ?>"
+                                   placeholder="Stay Connected"
+                                   class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Newsletter Description</label>
+                            <input type="text" name="footer_newsletter_desc" value="<?= e($footerNewsletterDesc) ?>"
+                                   placeholder="Subscribe for seasonal harvest announcements..."
+                                   class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Footer Support Phone</label>
+                            <input type="text" name="footer_contact_phone" value="<?= e($footerContactPhone) ?>"
+                                   placeholder="+91 81234 50509"
+                                   class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Footer Support Email</label>
+                            <input type="email" name="footer_contact_email" value="<?= e($footerContactEmail) ?>"
+                                   placeholder="Contact@legacyfood.in"
+                                   class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Social Links Card -->
+            <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-4">
+                <div class="border-b border-[#e7dec8] pb-4">
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                        Social Handles
+                    </div>
+                    <h2 class="font-display text-lg font-bold text-[#07160d]">Social Media Channels (Shown in Footer)</h2>
+                    <p class="text-xs text-stone-500 mt-0.5">Icons will be rendered for channels with a populated URL.</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Instagram Profile URL</label>
+                        <input type="url" name="instagram_url" value="<?= e($social['instagram_url'] ?? 'https://www.instagram.com/legacy.ghee?utm_source=qr') ?>"
+                               placeholder="https://instagram.com/legacy.ghee"
+                               class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-xs text-[#1c1917] focus:border-[#bc944c] focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Facebook Page URL</label>
+                        <input type="url" name="facebook_url" value="<?= e($social['facebook_url'] ?? 'https://www.facebook.com/share/1E2eLKSKph/?mibextid=wwXIfr') ?>"
+                               placeholder="https://facebook.com/..."
+                               class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-xs text-[#1c1917] focus:border-[#bc944c] focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">YouTube Channel URL</label>
+                        <input type="url" name="youtube_url" value="<?= e($social['youtube_url'] ?? '') ?>"
+                               placeholder="https://youtube.com/@legacyfood"
+                               class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-xs text-[#1c1917] focus:border-[#bc944c] focus:outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Bottom Copyright & Badges Card -->
+            <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-5">
+                <div class="border-b border-[#e7dec8] pb-4">
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                        Bottom Bar
+                    </div>
+                    <h2 class="font-display text-lg font-bold text-[#07160d]">Copyright Notice & Trust Badges</h2>
+                    <p class="text-xs text-stone-500 mt-0.5">Customize the bottom-most legal strip and accreditation badges.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Copyright Statement</label>
+                        <input type="text" name="footer_copyright_text" value="<?= e($footerCopyrightText) ?>"
+                               placeholder="© {year} Legacy Food. All rights reserved. Crafted in South India."
+                               class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                        <p class="text-[11px] text-stone-500 mt-1">Use <code>{year}</code> to automatically insert current calendar year.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Trust & Accreditation Badges</label>
+                        <input type="text" name="footer_badges_text" value="<?= e($footerBadgesText) ?>"
+                               placeholder="100% NABL Accredited Lab Verified • FSSAI Compliant"
+                               class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-sm text-[#1c1917] focus:border-[#bc944c] focus:outline-none focus:ring-1 focus:ring-[#bc944c]">
+                        <p class="text-[11px] text-stone-500 mt-1">Displayed in the bottom footer row alongside FAQ and Shop links.</p>
                     </div>
                 </div>
             </div>

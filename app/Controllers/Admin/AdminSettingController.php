@@ -27,7 +27,11 @@ class AdminSettingController extends Controller {
         unset($posted['_csrf_token']);
 
         // Checkbox defaults for settings that might be unticked
-        $checkboxes = ['razorpay_enabled', 'cod_enabled', 'show_cgst_sgst'];
+        $checkboxes = [
+            'razorpay_enabled', 'cod_enabled', 'show_cgst_sgst',
+            'header_announcement_enabled', 'header_show_whatsapp',
+            'footer_newsletter_enabled'
+        ];
         foreach ($checkboxes as $cb) {
             if (!isset($posted[$cb])) {
                 $posted[$cb] = '0';
@@ -68,6 +72,23 @@ class AdminSettingController extends Controller {
             'twitter_handle' => 'social',
             'instagram_url' => 'social',
             'facebook_url' => 'social',
+            'youtube_url' => 'social',
+            'header_announcement_enabled' => 'header',
+            'header_announcement_text' => 'header',
+            'header_logo_url' => 'header',
+            'header_whatsapp_text' => 'header',
+            'header_show_whatsapp' => 'header',
+            'footer_logo_url' => 'footer',
+            'footer_about_text' => 'footer',
+            'footer_col2_title' => 'footer',
+            'footer_col3_title' => 'footer',
+            'footer_newsletter_title' => 'footer',
+            'footer_newsletter_desc' => 'footer',
+            'footer_newsletter_enabled' => 'footer',
+            'footer_contact_phone' => 'footer',
+            'footer_contact_email' => 'footer',
+            'footer_copyright_text' => 'footer',
+            'footer_badges_text' => 'footer',
         ];
 
         foreach ($posted as $key => $value) {

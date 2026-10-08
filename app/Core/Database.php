@@ -22,13 +22,26 @@ class Database {
             try {
                 self::$instance = self::connectPdo($host, $port, $dbName, $user, $pass, $charset);
             } catch (PDOException $e) {
-                // If the primary connection failed and it was attempting production while on a local/dev machine,
-                // seamlessly fall back to the local database connection!
                 $connections = config('database.connections', []);
-                $altKey = ($target === 'production') ? 'local' : null;
+                $isLocal = config('database.is_local', false);
 
-                if ($altKey && isset($connections[$altKey])) {
-                    $alt = $connections[$altKey];
+                // If production connection failed with 'localhost', try '127.0.0.1' (socket vs TCP fallback on Linux servers)
+                if ($target === 'production') {
+                    $altHost = ($host === 'localhost') ? '127.0.0.1' : ($host === '127.0.0.1' ? 'localhost' : null);
+                    if ($altHost !== null) {
+                        try {
+                            self::$instance = self::connectPdo($altHost, $port, $dbName, $user, $pass, $charset);
+                            error_log("Database notice: Connected to production DB using alternate host '{$altHost}'.");
+                            goto success;
+                        } catch (\Throwable $altHostEx) {
+                            // Proceed to other fallbacks
+                        }
+                    }
+                }
+
+                // If on local/dev machine and production was attempted, fall back to local database
+                if ($target === 'production' && $isLocal && isset($connections['local'])) {
+                    $alt = $connections['local'];
                     try {
                         self::$instance = self::connectPdo(
                             $alt['host'],
@@ -38,14 +51,36 @@ class Database {
                             $alt['password'],
                             $alt['charset']
                         );
-                        error_log("Database notice: Production connection unavailable. Seamlessly fell back to {$altKey} database '{$alt['database']}'.");
+                        error_log("Database notice: Production connection unavailable on local dev. Seamlessly fell back to local database '{$alt['database']}'.");
+                        goto success;
                     } catch (\Throwable $altEx) {
                         throw $e;
                     }
-                } else {
-                    throw $e;
                 }
+
+                // If target was resolved to local but local failed, try production profile
+                if ($target === 'local' && isset($connections['production'])) {
+                    $alt = $connections['production'];
+                    try {
+                        self::$instance = self::connectPdo(
+                            $alt['host'],
+                            $alt['port'],
+                            $alt['database'],
+                            $alt['username'],
+                            $alt['password'],
+                            $alt['charset']
+                        );
+                        error_log("Database notice: Local connection unavailable. Seamlessly fell back to production database '{$alt['database']}'.");
+                        goto success;
+                    } catch (\Throwable $altEx) {
+                        throw $e;
+                    }
+                }
+
+                throw $e;
             }
+
+            success:
 
             // Check if tables are initialized
             if (!self::$schemaChecked) {

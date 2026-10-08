@@ -1,18 +1,35 @@
 <?php
 
-// Check host and environment to identify whether running locally
-$hostHeader = $_SERVER['HTTP_HOST'] ?? '';
-$serverIp = $_SERVER['SERVER_ADDR'] ?? '';
+// Check host, domain, and server path to reliably detect local dev vs live production server
+$hostHeader = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+$hostName = strtolower(explode(':', $hostHeader)[0] ?? '');
 
-$isLocalHost = in_array($hostHeader, ['localhost', '127.0.0.1', '::1', 'legacyfood.test', 'localhost:8000', 'localhost:8080'])
-    || str_ends_with($hostHeader, '.test')
-    || str_ends_with($hostHeader, '.local')
-    || str_ends_with($hostHeader, '.localhost')
-    || in_array($serverIp, ['127.0.0.1', '::1'])
-    || (php_sapi_name() === 'cli');
+// Known local development hostnames
+$isLocalDomain = in_array($hostName, ['localhost', '127.0.0.1', '::1', 'legacyfood.test', 'localhost:8000', 'localhost:8080'])
+    || str_ends_with($hostName, '.test')
+    || str_ends_with($hostName, '.local')
+    || str_ends_with($hostName, '.localhost');
+
+// Live production indicators:
+// 1. Host domain contains lensinteractive.com or live public domain
+// 2. Filesystem path is Linux server directory (/home/... or /public_html/)
+$currentDir = str_replace('\\', '/', __DIR__);
+$isProductionPath = str_starts_with($currentDir, '/home/')
+    || str_contains($currentDir, '/public_html/')
+    || str_contains($currentDir, 'lensinteractive.com');
+
+$isProductionDomain = str_contains($hostName, 'lensinteractive.com')
+    || (!empty($hostName) && !$isLocalDomain);
+
+$isCli = (php_sapi_name() === 'cli');
+$isWindows = (PHP_OS_FAMILY === 'Windows');
+
+// True local environment: ONLY when on a local development domain/machine, and NEVER on production path or domain
+$isLocalHost = ($isLocalDomain || ($isCli && $isWindows)) && !$isProductionPath && !$isProductionDomain;
 
 $appEnv = strtolower((string)($_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? getenv('APP_ENV') ?: ''));
 $isLocalEnv = ($appEnv === 'local' || $appEnv === 'development' || $appEnv === 'dev');
+$isProdEnv = ($appEnv === 'production' || $appEnv === 'prod');
 
 // Determine which DB target to use: 'auto' (default), 'local', or 'production'
 $dbTarget = strtolower((string)($_ENV['DB_TARGET'] ?? $_SERVER['DB_TARGET'] ?? getenv('DB_TARGET') ?: 'auto'));
@@ -23,8 +40,15 @@ if ($dbTarget === 'local') {
 } elseif ($dbTarget === 'production' || $dbTarget === 'prod') {
     $useLocal = false;
 } else {
-    // 'auto' mode: uses local credentials if on localhost/.test domain or APP_ENV=local
-    $useLocal = $isLocalEnv || $isLocalHost;
+    // 'auto' mode:
+    // If on live production domain or server path, ALWAYS default to production database
+    if ($isProductionDomain || $isProductionPath || $isProdEnv) {
+        $useLocal = false;
+    } elseif ($isLocalHost || $isLocalEnv) {
+        $useLocal = true;
+    } else {
+        $useLocal = false;
+    }
 }
 
 // ====================================================================
@@ -68,14 +92,28 @@ if ($useLocal) {
     $charset = $prodCharset;
 }
 
-// Fallback to generic DB_* variables if specified directly without LOCAL/PROD prefixes
-if (isset($_ENV['DB_DATABASE']) && !isset($_ENV['DB_LOCAL_DATABASE']) && !isset($_ENV['DB_PROD_DATABASE'])) {
-    $host = $_ENV['DB_HOST'] ?? $host;
-    $port = $_ENV['DB_PORT'] ?? $port;
-    $database = $_ENV['DB_DATABASE'];
-    $username = $_ENV['DB_USERNAME'] ?? $username;
-    $password = $_ENV['DB_PASSWORD'] ?? $password;
-    $charset = $_ENV['DB_CHARSET'] ?? $charset;
+// Fallback to generic DB_* variables if specified directly
+if (isset($_ENV['DB_DATABASE'])) {
+    if (!$useLocal) {
+        // In production, do NOT let default 'root'/empty overwrite production settings
+        if (!empty($_ENV['DB_USERNAME']) && $_ENV['DB_USERNAME'] !== 'root') {
+            $host = $_ENV['DB_HOST'] ?? $host;
+            $port = $_ENV['DB_PORT'] ?? $port;
+            $database = $_ENV['DB_DATABASE'] ?? $database;
+            $username = $_ENV['DB_USERNAME'];
+            $password = $_ENV['DB_PASSWORD'] ?? $password;
+            $charset = $_ENV['DB_CHARSET'] ?? $charset;
+        }
+    } else {
+        if (!isset($_ENV['DB_LOCAL_DATABASE'])) {
+            $host = $_ENV['DB_HOST'] ?? $host;
+            $port = $_ENV['DB_PORT'] ?? $port;
+            $database = $_ENV['DB_DATABASE'];
+            $username = $_ENV['DB_USERNAME'] ?? $username;
+            $password = $_ENV['DB_PASSWORD'] ?? $password;
+            $charset = $_ENV['DB_CHARSET'] ?? $charset;
+        }
+    }
 }
 
 return [

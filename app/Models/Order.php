@@ -14,7 +14,37 @@ class Order extends Model {
         $year = date('Y');
         $lastOrder = Database::fetch("SELECT id FROM `orders` ORDER BY id DESC LIMIT 1");
         $nextSeq = ($lastOrder ? (int)$lastOrder['id'] : 0) + 1;
-        return 'LF-' . $year . '-' . str_pad((string)$nextSeq, 6, '0', STR_PAD_LEFT);
+        $suffix = strtoupper(bin2hex(random_bytes(3)));
+        return 'LF-' . $year . '-' . str_pad((string)$nextSeq, 6, '0', STR_PAD_LEFT) . '-' . $suffix;
+    }
+
+    public static function rememberAccess(int $orderId, string $orderNumber): void {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (!isset($_SESSION['recent_orders']) || !is_array($_SESSION['recent_orders'])) {
+            $_SESSION['recent_orders'] = [];
+        }
+        $_SESSION['recent_orders'][$orderId] = $orderNumber;
+        $_SESSION['recent_orders'] = array_slice($_SESSION['recent_orders'], -10, null, true);
+    }
+
+    public static function canAccess(array $order): bool {
+        if (Auth::admin() !== null) {
+            return true;
+        }
+
+        $user = Auth::user();
+        if (!empty($order['user_id']) && $user !== null && ($user['status'] ?? '') === 'active' && (int)$user['id'] === (int)$order['user_id']) {
+            return true;
+        }
+
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $recent = $_SESSION['recent_orders'] ?? [];
+        $orderId = (int)($order['id'] ?? 0);
+        return isset($recent[$orderId]) && hash_equals((string)$recent[$orderId], (string)$order['order_number']);
     }
 
     public static function createFromCart(array $customerData, array $shippingAddress, array $billingAddress, string $paymentMethod): array {
@@ -33,6 +63,7 @@ class Order extends Model {
 
             // 1. Validate coupon if present before order generation
             if (!empty($cartSummary['coupon'])) {
+                Database::fetch("SELECT id FROM `coupons` WHERE `id` = :cid FOR UPDATE", ['cid' => $cartSummary['coupon']['id']]);
                 $cCheck = Coupon::validateCoupon(
                     $cartSummary['coupon']['code'],
                     $cartSummary['subtotal'],
@@ -79,17 +110,23 @@ class Order extends Model {
                     'total' => $item['line_total'],
                 ]);
 
-                // Deduct inventory
+                // Deduct inventory atomically so concurrent orders cannot oversell
                 if ($item['variant_id']) {
-                    Database::query("UPDATE `product_variants` SET `stock_quantity` = GREATEST(0, `stock_quantity` - :qty) WHERE `id` = :vid", [
+                    $affected = Database::query("UPDATE `product_variants` SET `stock_quantity` = `stock_quantity` - :qty WHERE `id` = :vid AND `stock_quantity` >= :qty", [
                         'qty' => $item['quantity'],
                         'vid' => $item['variant_id']
-                    ]);
+                    ])->rowCount();
+                    if ($affected === 0) {
+                        throw new \RuntimeException("Insufficient stock for {$item['name']}.");
+                    }
                 }
-                Database::query("UPDATE `products` SET `stock_quantity` = GREATEST(0, `stock_quantity` - :qty) WHERE `id` = :pid", [
+                $affected = Database::query("UPDATE `products` SET `stock_quantity` = `stock_quantity` - :qty WHERE `id` = :pid AND `stock_quantity` >= :qty", [
                     'qty' => $item['quantity'],
                     'pid' => $item['product_id']
-                ]);
+                ])->rowCount();
+                if ($affected === 0) {
+                    throw new \RuntimeException("Insufficient stock for {$item['name']}.");
+                }
 
                 // Inventory transaction record
                 Database::insert('inventory_transactions', [
@@ -155,9 +192,15 @@ class Order extends Model {
                     'order_id' => $orderId,
                     'discount_amount' => $cartSummary['discount']
                 ]);
-                Database::query("UPDATE `coupons` SET `usage_count` = `usage_count` + 1 WHERE `id` = :cid", [
-                    'cid' => $cartSummary['coupon']['id']
-                ]);
+                $couponUpdated = Database::query(
+                    "UPDATE `coupons` SET `usage_count` = `usage_count` + 1
+                     WHERE `id` = :cid
+                       AND (`usage_limit_total` IS NULL OR `usage_limit_total` = 0 OR `usage_count` < `usage_limit_total`)",
+                    ['cid' => $cartSummary['coupon']['id']]
+                )->rowCount();
+                if ($couponUpdated === 0) {
+                    throw new \RuntimeException('The coupon is no longer available.');
+                }
             }
 
             Database::commit();
@@ -177,7 +220,7 @@ class Order extends Model {
         } catch (\Throwable $e) {
             Database::rollBack();
             error_log("Order creation failed: " . $e->getMessage());
-            return ['success' => false, 'error' => 'Order processing failed: ' . $e->getMessage()];
+            return ['success' => false, 'error' => 'Order processing failed. Please review your cart and try again.'];
         }
     }
 
@@ -198,17 +241,22 @@ class Order extends Model {
                     'order_id' => $orderId,
                     'invoice_number' => $invoiceNumber,
                     'invoice_date' => date('Y-m-d', strtotime($order['created_at'])),
-                    'total_amount' => $order['total_amount'],
-                    'tax_amount' => $order['tax_amount'],
-                    'file_path' => null
+                    'subtotal' => $order['subtotal'],
+                    'discount' => $order['discount_amount'],
+                    'shipping' => $order['shipping_amount'],
+                    'tax' => $order['tax_amount'],
+                    'total' => $order['total_amount'],
                 ]);
                 $order['invoice'] = Database::fetch("SELECT * FROM `invoices` WHERE `order_id` = :oid LIMIT 1", ['oid' => $orderId]);
             } catch (\Throwable $invEx) {
                 $order['invoice'] = [
                     'invoice_number' => $invoiceNumber,
                     'invoice_date' => date('Y-m-d', strtotime($order['created_at'])),
-                    'total_amount' => $order['total_amount'],
-                    'tax_amount' => $order['tax_amount'],
+                    'subtotal' => $order['subtotal'],
+                    'discount' => $order['discount_amount'],
+                    'shipping' => $order['shipping_amount'],
+                    'tax' => $order['tax_amount'],
+                    'total' => $order['total_amount'],
                 ];
             }
         }
@@ -220,9 +268,9 @@ class Order extends Model {
         $order['shipping_fee'] = $order['shipping_amount'];
 
         if ((empty($order['customer_name']) || $order['customer_name'] === 'Customer') && !empty($order['user_id'])) {
-            $u = Database::fetch("SELECT full_name, email, phone FROM `users` WHERE `id` = :uid LIMIT 1", ['uid' => $order['user_id']]);
+            $u = Database::fetch("SELECT name, email, phone FROM `users` WHERE `id` = :uid LIMIT 1", ['uid' => $order['user_id']]);
             if ($u) {
-                if (!empty($u['full_name'])) $order['customer_name'] = $u['full_name'];
+                if (!empty($u['name'])) $order['customer_name'] = $u['name'];
                 if (empty($order['customer_email']) && !empty($u['email'])) $order['customer_email'] = $u['email'];
                 if (empty($order['customer_phone']) && !empty($u['phone'])) $order['customer_phone'] = $u['phone'];
             }
@@ -248,15 +296,6 @@ class Order extends Model {
     }
 
     public static function getUserOrders(int $userId): array {
-        $user = Database::fetch("SELECT email FROM `users` WHERE `id` = :uid LIMIT 1", ['uid' => $userId]);
-        if ($user && !empty($user['email'])) {
-            try {
-                Database::query("UPDATE `orders` SET `user_id` = :uid WHERE LOWER(TRIM(`guest_email`)) = :email AND (`user_id` IS NULL OR `user_id` = 0)", [
-                    'uid' => $userId,
-                    'email' => strtolower(trim($user['email']))
-                ]);
-            } catch (\Throwable $t) {}
-        }
         return Database::fetchAll("SELECT * FROM `orders` WHERE `user_id` = :uid ORDER BY `id` DESC", ['uid' => $userId]);
     }
 

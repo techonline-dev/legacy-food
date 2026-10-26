@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Auth;
+use App\Core\Database;
 use App\Models\Review;
 use App\Models\Product;
 
@@ -15,7 +16,17 @@ class ReviewController extends Controller {
                 return;
             }
             flash('error', 'Token expired.');
-            $this->redirect($_SERVER['HTTP_REFERER'] ?? 'shop');
+            $this->redirect(safe_redirect_target((string)($_SERVER['HTTP_REFERER'] ?? 'shop'), 'shop'));
+            return;
+        }
+
+        if (!\App\Core\RateLimiter::attempt('review:' . client_ip(), 5, 3600)) {
+            if ($this->request->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Too many review submissions. Please try again later.'], 429);
+                return;
+            }
+            flash('error', 'Too many review submissions. Please try again later.');
+            $this->redirect('shop');
             return;
         }
 
@@ -32,8 +43,31 @@ class ReviewController extends Controller {
                 return;
             }
             flash('error', 'Please fill in all required review fields.');
-            $this->redirect($_SERVER['HTTP_REFERER'] ?? 'shop');
+            $this->redirect(safe_redirect_target((string)($_SERVER['HTTP_REFERER'] ?? 'shop'), 'shop'));
             return;
+        }
+
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            if ($this->request->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Please enter a valid email address.'], 422);
+                return;
+            }
+            flash('error', 'Please enter a valid email address.');
+            $this->redirect(safe_redirect_target((string)($_SERVER['HTTP_REFERER'] ?? 'shop'), 'shop'));
+            return;
+        }
+
+        $verifiedPurchase = 0;
+        if (Auth::check()) {
+            $verifiedPurchase = Database::fetch(
+                "SELECT 1 FROM `orders` o
+                 INNER JOIN `order_items` oi ON oi.order_id = o.id
+                 WHERE o.user_id = :uid AND oi.product_id = :pid
+                   AND o.status NOT IN ('cancelled', 'returned')
+                   AND (o.payment_status = 'paid' OR o.status = 'delivered')
+                 LIMIT 1",
+                ['uid' => Auth::id(), 'pid' => $productId]
+            ) ? 1 : 0;
         }
 
         Review::addReview([
@@ -44,15 +78,15 @@ class ReviewController extends Controller {
             'rating' => $rating,
             'title' => $title,
             'review_text' => $reviewText,
-            'is_verified_purchase' => Auth::check() ? 1 : 0
+            'is_verified_purchase' => $verifiedPurchase
         ]);
 
         if ($this->request->isAjax()) {
-            $this->json(['success' => true, 'message' => 'Thank you! Your review has been submitted successfully.']);
+            $this->json(['success' => true, 'message' => 'Thank you! Your review has been submitted and is awaiting moderation.']);
             return;
         }
 
-        flash('success', 'Thank you! Your review has been submitted.');
-        $this->redirect($_SERVER['HTTP_REFERER'] ?? 'shop');
+        flash('success', 'Thank you! Your review has been submitted and is awaiting moderation.');
+        $this->redirect(safe_redirect_target((string)($_SERVER['HTTP_REFERER'] ?? 'shop'), 'shop'));
     }
 }

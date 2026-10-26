@@ -15,13 +15,10 @@ class InvoiceController extends Controller {
             return;
         }
 
-        // Customer access check (if order belongs to a user, must be that user or admin)
-        if (!empty($order['user_id']) && !Auth::adminCheck()) {
-            if (!Auth::check() || Auth::id() != $order['user_id']) {
-                $this->response->status(403);
-                echo "Unauthorized invoice access.";
-                return;
-            }
+        if (!Order::canAccess($order)) {
+            $this->response->status(403);
+            echo "Unauthorized invoice access.";
+            return;
         }
 
         $this->view('invoice.template', [

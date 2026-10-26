@@ -53,36 +53,13 @@ if (!function_exists('config')) {
 
 if (!function_exists('url')) {
     function url(string $path = ''): string {
-        $configuredUrl = rtrim((string)config('app.url', 'https://lensinteractive.com/legacyfood'), '/');
-        $baseUrl = $configuredUrl;
-        
-        // Auto-detect base URL dynamically if running in local environment or HTTP_HOST is present
-        if (isset($_SERVER['HTTP_HOST'])) {
-            $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-                || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-                || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
-                || (isset($_SERVER['HTTP_CF_VISITOR']) && str_contains($_SERVER['HTTP_CF_VISITOR'], 'https'));
-            $protocol = $isHttps ? 'https://' : 'http://';
-            
-            $confHost = parse_url($configuredUrl, PHP_URL_HOST);
-            if (!empty($configuredUrl) && !empty($confHost) && $_SERVER['HTTP_HOST'] === $confHost) {
-                // Keep the configured URL when host matches production domain
-                $baseUrl = $configuredUrl;
-            } else {
-                $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-                $subDir = dirname($scriptName);
-                $subDir = str_replace('\\', '/', $subDir);
-                $subDir = preg_replace('#/(public)$#', '', $subDir);
-                $subDir = rtrim($subDir, '/');
-                if (!empty($subDir) && $subDir !== '/') {
-                    $baseUrl = $protocol . $_SERVER['HTTP_HOST'] . $subDir;
-                } else {
-                    $baseUrl = $protocol . $_SERVER['HTTP_HOST'];
-                }
-            }
-        }
-        
+        $baseUrl = rtrim((string)config('app.url', ''), '/');
         $path = ltrim($path, '/');
+
+        if ($baseUrl === '') {
+            return $path === '' ? '/' : '/' . $path;
+        }
+
         return $path === '' ? $baseUrl : $baseUrl . '/' . $path;
     }
 }
@@ -246,8 +223,22 @@ if (!function_exists('has_flash')) {
     }
 }
 
+if (!function_exists('safe_redirect_target')) {
+    function safe_redirect_target(string $url, string $fallback = '/'): string {
+        $url = trim($url);
+        if ($url === '' || str_contains($url, "\r") || str_contains($url, "\n") || str_contains($url, '\\')) {
+            return $fallback;
+        }
+        if (str_starts_with($url, '//') || preg_match('#^[a-z][a-z0-9+.-]*:#i', $url)) {
+            return $fallback;
+        }
+        return $url;
+    }
+}
+
 if (!function_exists('redirect')) {
     function redirect(string $url) {
+        $url = safe_redirect_target($url);
         if (!preg_match('#^https?://#i', $url)) {
             $url = url($url);
         }
@@ -264,6 +255,119 @@ if (!function_exists('slugify')) {
         $text = trim($text, '-');
         $text = preg_replace('~-+~', '-', $text);
         return strtolower($text ?: 'n-a');
+    }
+}
+
+if (!function_exists('password_policy_error')) {
+    function password_policy_error(string $password): ?string {
+        if (strlen($password) < 8 || strlen($password) > 72) {
+            return 'Password must be between 8 and 72 characters long.';
+        }
+        if (!preg_match('/[A-Za-z]/', $password) || !preg_match('/\d/', $password)) {
+            return 'Password must include at least one letter and one number.';
+        }
+        return null;
+    }
+}
+
+if (!function_exists('client_ip')) {
+    function client_ip(): string {
+        return (string)($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+    }
+}
+
+if (!function_exists('razorpay_key_id')) {
+    function razorpay_key_id(): string {
+        $fromSettings = (string)setting('razorpay_key_id', '');
+        return $fromSettings !== '' ? $fromSettings : (string)config('payment.razorpay.key_id', '');
+    }
+}
+
+if (!function_exists('razorpay_key_secret')) {
+    function razorpay_key_secret(): string {
+        $fromSettings = (string)setting('razorpay_key_secret', '');
+        return $fromSettings !== '' ? $fromSettings : (string)config('payment.razorpay.key_secret', '');
+    }
+}
+
+if (!function_exists('payment_demo_enabled')) {
+    function payment_demo_enabled(): bool {
+        if (config('app.env') === 'production') {
+            return false;
+        }
+        return filter_var(env('PAYMENT_DEMO', config('payment.demo', false)), FILTER_VALIDATE_BOOLEAN);
+    }
+}
+
+if (!function_exists('sanitize_html')) {
+    function sanitize_html(string $html): string {
+        if (trim($html) === '') {
+            return '';
+        }
+
+        $allowed = ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h2', 'h3', 'h4', 'h5', 'blockquote', 'a', 'span', 'div'];
+        $allowedAttrs = ['href', 'title', 'target', 'rel', 'class'];
+
+        $doc = new \DOMDocument('1.0', 'UTF-8');
+        $previous = libxml_use_internal_errors(true);
+        $doc->loadHTML('<?xml encoding="UTF-8"><div id="__root">' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        $root = $doc->getElementById('__root');
+        if (!$root) {
+            return e(strip_tags($html));
+        }
+
+        $cleanNode = static function (\DOMNode $node) use (&$cleanNode, $allowed, $allowedAttrs): void {
+            if ($node instanceof \DOMElement) {
+                $tag = strtolower($node->tagName);
+                if (!in_array($tag, $allowed, true)) {
+                    $text = $node->ownerDocument->createTextNode($node->textContent);
+                    $node->parentNode?->replaceChild($text, $node);
+                    return;
+                }
+
+                $attrsToRemove = [];
+                foreach (iterator_to_array($node->attributes) as $attr) {
+                    $name = strtolower($attr->name);
+                    if (!in_array($name, $allowedAttrs, true) || str_starts_with($name, 'on')) {
+                        $attrsToRemove[] = $attr->name;
+                    }
+                }
+                foreach ($attrsToRemove as $name) {
+                    $node->removeAttribute($name);
+                }
+
+                if ($tag === 'a') {
+                    $href = trim((string)$node->getAttribute('href'));
+                    if ($href !== '' && preg_match('#^(javascript|data|vbscript):#i', $href)) {
+                        $node->removeAttribute('href');
+                    }
+                    if ($node->getAttribute('target') === '_blank') {
+                        $rel = trim($node->getAttribute('rel'));
+                        $rels = $rel === '' ? [] : preg_split('/\s+/', $rel);
+                        if (!in_array('noopener', $rels, true)) $rels[] = 'noopener';
+                        if (!in_array('noreferrer', $rels, true)) $rels[] = 'noreferrer';
+                        $node->setAttribute('rel', implode(' ', array_filter($rels)));
+                    }
+                }
+            }
+
+            foreach (iterator_to_array($node->childNodes) as $child) {
+                $cleanNode($child);
+            }
+        };
+
+        foreach (iterator_to_array($root->childNodes) as $child) {
+            $cleanNode($child);
+        }
+
+        $out = '';
+        foreach ($root->childNodes as $child) {
+            $out .= $doc->saveHTML($child);
+        }
+        return $out;
     }
 }
 

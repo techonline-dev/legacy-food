@@ -26,8 +26,10 @@ $whatsappNumberClean = preg_replace('/[^0-9]/', '', $whatsappNumber);
 $navMenuTree = \App\Models\MenuItem::getTree('header', true);
 
 $formatNavUrl = function(string $rawUrl) {
-    if (empty($rawUrl)) return '#';
-    if (str_starts_with($rawUrl, 'http://') || str_starts_with($rawUrl, 'https://') || str_starts_with($rawUrl, '#') || str_starts_with($rawUrl, 'mailto:') || str_starts_with($rawUrl, 'tel:')) {
+    $rawUrl = trim($rawUrl);
+    if ($rawUrl === '') return '#';
+    if (preg_match('/^(javascript|data|vbscript):/i', $rawUrl)) return '#';
+    if (preg_match('#^https?://#i', $rawUrl) || str_starts_with($rawUrl, '#') || str_starts_with($rawUrl, 'mailto:') || str_starts_with($rawUrl, 'tel:')) {
         return $rawUrl;
     }
     return url(ltrim($rawUrl, '/'));
@@ -76,7 +78,7 @@ $getNavIcon = function(string $title, string $url, string $colorClass = 'text-st
     <div class="bg-[#07160d] text-[#d8bd99] py-1.5 px-4 text-center border-b border-[#bc944c]/20">
         <p class="text-[11px] md:text-xs font-body tracking-wider flex items-center justify-center gap-2">
             <span class="inline-block w-2 h-2 rounded-full bg-[#bc944c] animate-pulse"></span>
-            <span><?= $announcementText ?></span>
+            <span><?= sanitize_html($announcementText) ?></span>
         </p>
     </div>
     <?php endif; ?>

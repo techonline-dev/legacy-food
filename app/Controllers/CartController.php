@@ -44,7 +44,7 @@ class CartController extends Controller {
             $this->redirect('cart');
         } else {
             flash('error', $res['error']);
-            $this->redirect($_SERVER['HTTP_REFERER'] ?? 'cart');
+            $this->redirect(safe_redirect_target((string)($_SERVER['HTTP_REFERER'] ?? 'cart'), 'cart'));
         }
     }
 
@@ -70,13 +70,23 @@ class CartController extends Controller {
     }
 
     public function applyCoupon(): void {
+        if (!\App\Core\RateLimiter::attempt('coupon:' . client_ip(), 15, 3600)) {
+            if ($this->request->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Too many coupon attempts. Please try again later.'], 429);
+            } else {
+                flash('error', 'Too many coupon attempts. Please try again later.');
+                $this->redirect('cart');
+            }
+            return;
+        }
+
         $code = trim((string)($this->request->input('coupon_code') ?: $this->request->input('code', '')));
         if (empty($code)) {
             if ($this->request->isAjax()) {
                 $this->json(['success' => false, 'error' => 'Please enter a valid coupon code.'], 400);
             } else {
                 flash('error', 'Please enter a coupon code.');
-                $this->redirect($_SERVER['HTTP_REFERER'] ?? 'cart');
+                $this->redirect(safe_redirect_target((string)($_SERVER['HTTP_REFERER'] ?? 'cart'), 'cart'));
             }
             return;
         }
@@ -94,7 +104,7 @@ class CartController extends Controller {
                 $this->json(['success' => false, 'error' => $check['error']], 400);
             } else {
                 flash('error', $check['error']);
-                $this->redirect($_SERVER['HTTP_REFERER'] ?? 'cart');
+                $this->redirect(safe_redirect_target((string)($_SERVER['HTTP_REFERER'] ?? 'cart'), 'cart'));
             }
             return;
         }
@@ -116,7 +126,7 @@ class CartController extends Controller {
             ]);
         } else {
             flash('success', $check['message']);
-            $this->redirect($_SERVER['HTTP_REFERER'] ?? 'cart');
+            $this->redirect(safe_redirect_target((string)($_SERVER['HTTP_REFERER'] ?? 'cart'), 'cart'));
         }
     }
 
@@ -132,7 +142,7 @@ class CartController extends Controller {
             ]);
         } else {
             flash('info', 'Coupon removed.');
-            $this->redirect($_SERVER['HTTP_REFERER'] ?? 'cart');
+            $this->redirect(safe_redirect_target((string)($_SERVER['HTTP_REFERER'] ?? 'cart'), 'cart'));
         }
     }
 }

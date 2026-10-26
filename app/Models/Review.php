@@ -22,7 +22,7 @@ class Review extends Model {
             'title' => $data['title'] ?? null,
             'review_text' => $data['review_text'],
             'is_verified_purchase' => $data['is_verified_purchase'] ?? 0,
-            'status' => 'approved' // auto-approve verified/customer reviews or default to approved for smooth store demo
+            'status' => 'pending'
         ]);
 
         // Update product rating cache

@@ -56,12 +56,7 @@ abstract class Controller {
     }
 
     protected function validateCsrf(): bool {
-        $isLocal = (env('APP_ENV') === 'development' || env('APP_ENV') === 'local' || in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1']));
         $token = $this->request->input('_csrf_token') ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
-        $valid = verify_csrf($token);
-        if (!$valid && $isLocal) {
-            return true;
-        }
-        return $valid;
+        return verify_csrf(is_string($token) ? $token : null);
     }
 }

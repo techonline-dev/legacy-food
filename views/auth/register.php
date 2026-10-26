@@ -34,8 +34,8 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs text-[#07160d] mb-1.5 font-semibold uppercase tracking-wider">Password (Min. 6 characters) *</label>
-                    <input type="password" name="password" required minlength="6" placeholder="••••••••"
+                    <label class="block text-xs text-[#07160d] mb-1.5 font-semibold uppercase tracking-wider">Password (Min. 8 characters, letters & numbers) *</label>
+                    <input type="password" name="password" required minlength="8" maxlength="72" placeholder="••••••••"
                            class="w-full px-4 py-3 text-xs rounded-xl bg-white border border-[#d6c7af] text-[#1c1917] placeholder-stone-400 focus:outline-none focus:border-[#bc944c] focus:ring-1 focus:ring-[#bc944c] transition-colors">
                 </div>
 

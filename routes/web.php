@@ -38,6 +38,8 @@ $router->post('/register', 'AuthController@register');
 $router->get('/logout', 'AuthController@logout');
 $router->get('/forgot-password', 'AuthController@showForgotPassword');
 $router->post('/forgot-password', 'AuthController@forgotPassword');
+$router->get('/reset-password/{token}', 'AuthController@showResetPassword');
+$router->post('/reset-password', 'AuthController@resetPassword');
 
 // Customer Account Routes (Protected by AuthMiddleware)
 $router->group(['middleware' => [AuthMiddleware::class]], function(Router $r) {

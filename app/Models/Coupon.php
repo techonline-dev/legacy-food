@@ -23,7 +23,7 @@ class Coupon extends Model {
             return ['valid' => false, 'error' => 'Please enter a coupon code.'];
         }
 
-        $coupon = Database::fetch("SELECT * FROM `coupons` WHERE UPPER(`code`) = :code LIMIT 1", ['code' => $code]);
+        $coupon = Database::fetch("SELECT * FROM `coupons` WHERE UPPER(`code`) = :code LIMIT 1 FOR UPDATE", ['code' => $code]);
 
         if (!$coupon) {
             return ['valid' => false, 'error' => "Coupon code '{$code}' does not exist."];
@@ -48,7 +48,7 @@ class Coupon extends Model {
         if ($subtotal < $minOrder) {
             return [
                 'valid' => false,
-                'error' => "Minimum order value of ₹" . number_format($minOrder, 2) . " required for coupon '{$code}'."
+                'error' => 'Minimum order value of ' . currency_format($minOrder) . " required for coupon '{$code}'."
             ];
         }
 

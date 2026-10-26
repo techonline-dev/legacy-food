@@ -3,11 +3,21 @@
 namespace App\Controllers\Admin;
 
 use App\Core\Controller;
+use App\Core\Auth;
 use App\Models\Setting;
 use App\Models\ActivityLog;
 
 class AdminSettingController extends Controller {
+    private function requireSuperAdmin(): void {
+        if (!Auth::isSuperAdmin()) {
+            flash('error', 'Only a super administrator can manage store settings.');
+            $this->redirect('admin');
+            exit;
+        }
+    }
+
     public function index(): void {
+        $this->requireSuperAdmin();
         $settings = Setting::allGrouped();
 
         $this->view('admin.settings.index', [
@@ -17,6 +27,7 @@ class AdminSettingController extends Controller {
     }
 
     public function update(): void {
+        $this->requireSuperAdmin();
         if (!$this->validateCsrf()) {
             flash('error', 'Token expired.');
             $this->redirect('admin/settings');
@@ -92,8 +103,13 @@ class AdminSettingController extends Controller {
         ];
 
         foreach ($posted as $key => $value) {
-            $group = $groupMap[$key] ?? 'general';
-            Setting::set($key, (string)$value, $group);
+            if (!isset($groupMap[$key]) || !is_scalar($value)) {
+                continue;
+            }
+            if ($key === 'razorpay_key_secret' && trim((string)$value) === '') {
+                continue;
+            }
+            Setting::set($key, (string)$value, $groupMap[$key]);
         }
 
         ActivityLog::log('settings_updated', 'Updated store configuration and settings');

@@ -1,16 +1,28 @@
 <?php
 
+$readEnv = static function (string $key, ?string $default = null): ?string {
+    $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+    if ($value === false || $value === null || $value === '') {
+        return $default;
+    }
+    return (string)$value;
+};
+
+$appEnv = strtolower($readEnv('APP_ENV', 'production') ?? 'production');
+$demoDefault = !in_array($appEnv, ['production', 'prod'], true);
+
 return [
     'currency' => 'INR',
+    'demo' => filter_var($readEnv('PAYMENT_DEMO', $demoDefault ? 'true' : 'false'), FILTER_VALIDATE_BOOLEAN),
     'razorpay' => [
         'enabled' => true,
-        'key_id' => getenv('RAZORPAY_KEY_ID') ?: 'rzp_test_legacyfood123',
-        'key_secret' => getenv('RAZORPAY_KEY_SECRET') ?: 'legacyfood_secret_demo',
+        'key_id' => $readEnv('RAZORPAY_KEY_ID', ''),
+        'key_secret' => $readEnv('RAZORPAY_KEY_SECRET', ''),
     ],
     'cashfree' => [
         'enabled' => false,
-        'app_id' => getenv('CASHFREE_APP_ID') ?: '',
-        'secret_key' => getenv('CASHFREE_SECRET_KEY') ?: '',
+        'app_id' => $readEnv('CASHFREE_APP_ID', ''),
+        'secret_key' => $readEnv('CASHFREE_SECRET_KEY', ''),
     ],
     'cod' => [
         'enabled' => true,

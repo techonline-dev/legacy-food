@@ -3,11 +3,21 @@
 namespace App\Controllers\Admin;
 
 use App\Core\Controller;
+use App\Core\Auth;
 use App\Core\Database;
 use App\Models\ActivityLog;
 
 class AdminCustomerController extends Controller {
+    private function requireSuperAdmin(): void {
+        if (!Auth::isSuperAdmin()) {
+            flash('error', 'Only a super administrator can manage customer accounts.');
+            $this->redirect('admin');
+            exit;
+        }
+    }
+
     public function index(): void {
+        $this->requireSuperAdmin();
         $q = trim((string)$this->request->input('q', ''));
         $where = "1=1";
         $params = [];
@@ -37,6 +47,7 @@ class AdminCustomerController extends Controller {
     }
 
     public function detail(int $id): void {
+        $this->requireSuperAdmin();
         $customer = Database::fetch("SELECT * FROM `users` WHERE `id` = :id LIMIT 1", ['id' => $id]);
         if (!$customer) {
             flash('error', 'Customer not found.');
@@ -116,6 +127,7 @@ class AdminCustomerController extends Controller {
     }
 
     public function update(int $id): void {
+        $this->requireSuperAdmin();
         if (!$this->validateCsrf()) {
             flash('error', 'Token expired.');
             $this->redirect('admin/customers/' . $id);
@@ -161,6 +173,7 @@ class AdminCustomerController extends Controller {
     }
 
     public function updateStatus(int $id): void {
+        $this->requireSuperAdmin();
         if (!$this->validateCsrf()) {
             flash('error', 'Token expired.');
             $this->redirect('admin/customers/' . $id);

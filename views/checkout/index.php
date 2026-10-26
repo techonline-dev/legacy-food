@@ -64,8 +64,8 @@
                                         <span>Create an account with these details to track this order online</span>
                                     </label>
                                     <div id="account_password_container" class="hidden mt-3 max-w-sm">
-                                        <label class="block text-xs text-stone-700 mb-1 font-semibold">Choose Account Password (min. 6 characters)</label>
-                                        <input type="password" name="account_password" minlength="6" placeholder="Choose a password" class="w-full px-3.5 py-2.5 text-xs rounded-xl bg-white border border-[#d6c7af] text-[#1c1917] focus:outline-none focus:border-[#bc944c]">
+                                        <label class="block text-xs text-stone-700 mb-1 font-semibold">Choose Account Password (min. 8 characters, letters & numbers)</label>
+                                        <input type="password" name="account_password" minlength="8" maxlength="72" placeholder="Choose a password" class="w-full px-3.5 py-2.5 text-xs rounded-xl bg-white border border-[#d6c7af] text-[#1c1917] focus:outline-none focus:border-[#bc944c]">
                                     </div>
                                 </div>
                             <?php endif; ?>

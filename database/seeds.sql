@@ -9,11 +9,9 @@ INSERT INTO `roles` (`id`, `name`, `slug`, `description`) VALUES
 (2, 'Manager', 'manager', 'Can manage products, orders, and content'),
 (3, 'Order Manager', 'order-manager', 'Can manage and process orders');
 
--- Default Super Admin (Password: Admin@LegacyFood2026)
--- Hash generated via password_hash('Admin@LegacyFood2026', PASSWORD_BCRYPT)
-INSERT INTO `admins` (`id`, `role_id`, `name`, `email`, `password`, `phone`, `status`) VALUES
-(1, 1, 'Legacy Food Administrator', 'admin@legacyfood.in', '$2y$12$fT7jP8r9wLwT1h5ZkK1IseGqA2BqjV8vLq7w6o9xM0iE2eLKSKph.', '+91 81234 50509', 'active')
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
+-- Admin accounts are never seeded with default credentials.
+-- Provision the first admin with: php scripts/create-admin.php
+-- (reads ADMIN_EMAIL and ADMIN_PASSWORD from .env)
 
 -- 2. PRODUCT CATEGORIES
 INSERT INTO `product_categories` (`id`, `name`, `slug`, `description`, `image`, `sort_order`, `is_active`) VALUES

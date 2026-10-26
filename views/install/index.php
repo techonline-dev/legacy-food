@@ -26,6 +26,10 @@
         <?php if ($connected): ?>
             <form action="<?= url('install/run') ?>" method="POST">
                 <?= csrf_field() ?>
+                <?php if (!empty($requiresInstallKey)): ?>
+                    <label class="block text-[11px] uppercase tracking-wider text-[#fdf6e3]/60 mb-1.5">Installer Key</label>
+                    <input type="password" name="install_key" required autocomplete="off" class="w-full mb-4 px-4 py-2.5 rounded-xl bg-black/30 border border-[#bc944c]/30 text-sm text-[#fdf6e3] focus:outline-none focus:border-[#bc944c]">
+                <?php endif; ?>
                 <button type="submit" class="btn-gold w-full py-3 text-xs uppercase tracking-wider font-bold">
                     <?= $tablesCount > 0 ? 'Re-run Schema & Seed Database' : 'Install Database Schema & Seeds' ?>
                 </button>

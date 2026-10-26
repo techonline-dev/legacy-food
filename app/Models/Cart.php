@@ -14,11 +14,13 @@ class Cart {
             $_SESSION['cart'] = [];
         }
 
-        // 1. If session cart is empty, try restoring from persistent guest cookie
+        $_SESSION['cart'] = self::sanitizeCartItems($_SESSION['cart']);
+
+        // 1. If session cart is empty, try restoring from signed persistent guest cookie
         if (empty($_SESSION['cart']) && !empty($_COOKIE['legacy_guest_cart'])) {
-            $cookieData = json_decode((string)$_COOKIE['legacy_guest_cart'], true);
+            $cookieData = self::decodeGuestCart((string)$_COOKIE['legacy_guest_cart']);
             if (is_array($cookieData) && !empty($cookieData)) {
-                $_SESSION['cart'] = $cookieData;
+                $_SESSION['cart'] = self::sanitizeCartItems($cookieData);
             }
         }
 
@@ -43,14 +45,100 @@ class Cart {
         }
     }
 
-    private static function persistCartCookie(): void {
-        if (!headers_sent()) {
-            if (!empty($_SESSION['cart'])) {
-                setcookie('legacy_guest_cart', json_encode($_SESSION['cart']), time() + (86400 * 30), '/');
-            } else {
-                setcookie('legacy_guest_cart', '', time() - 3600, '/');
-            }
+    private static function cookieSecret(): string {
+        $secret = (string)env('APP_KEY', '');
+        if ($secret === '') {
+            $secret = (string)env('INSTALL_KEY', '');
         }
+        return $secret;
+    }
+
+    private static function encodeGuestCart(array $cart): ?string {
+        $secret = self::cookieSecret();
+        if ($secret === '') {
+            return null;
+        }
+        $json = json_encode(self::sanitizeCartItems($cart));
+        if ($json === false) {
+            return null;
+        }
+        $payload = rtrim(strtr(base64_encode($json), '+/', '-_'), '=');
+        return $payload . '.' . hash_hmac('sha256', $payload, $secret);
+    }
+
+    private static function decodeGuestCart(string $value): ?array {
+        $secret = self::cookieSecret();
+        if ($secret === '' || !str_contains($value, '.')) {
+            return null;
+        }
+
+        [$payload, $signature] = explode('.', $value, 2);
+        if (!hash_equals(hash_hmac('sha256', $payload, $secret), $signature)) {
+            return null;
+        }
+
+        $json = base64_decode(strtr($payload, '-_', '+/'), true);
+        if ($json === false) {
+            return null;
+        }
+
+        $data = json_decode($json, true);
+        return is_array($data) ? $data : null;
+    }
+
+    private static function sanitizeCartItems(array $items): array {
+        $clean = [];
+        foreach ($items as $key => $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $productId = (int)($item['product_id'] ?? 0);
+            $variantId = !empty($item['variant_id']) ? (int)$item['variant_id'] : null;
+            $quantity = (int)($item['quantity'] ?? 0);
+
+            if ($productId <= 0 || $quantity <= 0) {
+                continue;
+            }
+
+            $expectedKey = $productId . '_' . ($variantId ?: '0');
+            if ((string)$key !== $expectedKey) {
+                continue;
+            }
+
+            $clean[$expectedKey] = [
+                'product_id' => $productId,
+                'variant_id' => $variantId,
+                'quantity' => min(100, $quantity),
+            ];
+        }
+        return $clean;
+    }
+
+    private static function persistCartCookie(): void {
+        if (headers_sent()) {
+            return;
+        }
+
+        $options = [
+            'expires' => time() + (86400 * 30),
+            'path' => '/',
+            'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ];
+
+        if (empty($_SESSION['cart'])) {
+            $options['expires'] = time() - 3600;
+            setcookie('legacy_guest_cart', '', $options);
+            return;
+        }
+
+        $encoded = self::encodeGuestCart($_SESSION['cart']);
+        if ($encoded === null) {
+            return;
+        }
+        setcookie('legacy_guest_cart', $encoded, $options);
     }
 
     public static function getSessionId(): string {
@@ -60,8 +148,8 @@ class Cart {
 
     public static function getStockFor(int $productId, ?int $variantId = null): int {
         if ($variantId) {
-            $variant = Database::fetch("SELECT stock_quantity FROM `product_variants` WHERE `id` = :vid", ['vid' => $variantId]);
-            if ($variant) return (int)$variant['stock_quantity'];
+            $variant = Database::fetch("SELECT stock_quantity FROM `product_variants` WHERE `id` = :vid AND `product_id` = :pid", ['vid' => $variantId, 'pid' => $productId]);
+            return $variant ? (int)$variant['stock_quantity'] : 0;
         }
         $product = Database::fetch("SELECT stock_quantity FROM `products` WHERE `id` = :pid", ['pid' => $productId]);
         return $product ? (int)$product['stock_quantity'] : 0;
@@ -80,6 +168,9 @@ class Cart {
                 'vid' => $variantId,
                 'pid' => $productId
             ]);
+            if (!$variant) {
+                return ['success' => false, 'error' => 'Invalid product variant selected.'];
+            }
         } else {
             // Pick default variant if any
             $variant = Database::fetch("SELECT * FROM `product_variants` WHERE `product_id` = :pid ORDER BY `is_default` DESC, `price` ASC LIMIT 1", [
@@ -280,9 +371,12 @@ class Cart {
         $totalItemsCount = 0;
 
         foreach ($_SESSION['cart'] as $key => $cartItem) {
-            $pid = (int)$cartItem['product_id'];
+            $pid = (int)($cartItem['product_id'] ?? 0);
             $vid = !empty($cartItem['variant_id']) ? (int)$cartItem['variant_id'] : null;
-            $qty = (int)$cartItem['quantity'];
+            $qty = max(1, min(100, (int)($cartItem['quantity'] ?? 0)));
+            if ($pid <= 0) {
+                continue;
+            }
 
             $product = Database::fetch("SELECT id, name, slug, featured_image, base_price, sale_price, stock_quantity, sku, gst_rate, hsn_code FROM `products` WHERE `id` = :pid LIMIT 1", ['pid' => $pid]);
             if (!$product) continue;
@@ -294,14 +388,15 @@ class Cart {
             $image = $product['featured_image'];
 
             if ($vid) {
-                $variant = Database::fetch("SELECT id, name, price, sale_price, stock_quantity, sku, image FROM `product_variants` WHERE `id` = :vid LIMIT 1", ['vid' => $vid]);
-                if ($variant) {
-                    $unitPrice = (float)($variant['sale_price'] ?: $variant['price']);
-                    $variantName = $variant['name'];
-                    $sku = $variant['sku'];
-                    if (!empty($variant['image'])) {
-                        $image = $variant['image'];
-                    }
+                $variant = Database::fetch("SELECT id, name, price, sale_price, stock_quantity, sku, image FROM `product_variants` WHERE `id` = :vid AND `product_id` = :pid LIMIT 1", ['vid' => $vid, 'pid' => $pid]);
+                if (!$variant) {
+                    continue;
+                }
+                $unitPrice = (float)($variant['sale_price'] ?: $variant['price']);
+                $variantName = $variant['name'];
+                $sku = $variant['sku'];
+                if (!empty($variant['image'])) {
+                    $image = $variant['image'];
                 }
             }
 

@@ -19,6 +19,27 @@
     RewriteRule ^ index.php [L]
 </IfModule>
 
+# Deny hidden files, environment files, SQL dumps and logs
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<FilesMatch "\.(env|sql|log|ini|md|lock|bak|old|sh)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
 # Browser Caching & Compression for static assets
 <IfModule mod_expires.c>
     ExpiresActive On

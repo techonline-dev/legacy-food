@@ -57,6 +57,7 @@ class Response {
     }
 
     public function redirect(string $url): void {
+        $url = safe_redirect_target($url);
         if (!preg_match('#^https?://#i', $url)) {
             $url = url($url);
         }

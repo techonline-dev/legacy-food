@@ -5,7 +5,7 @@
         </h1>
 
         <div class="card-glow bg-white p-8 md:p-12 rounded-3xl border border-[#e7dec8] shadow-sm max-w-none text-xs md:text-sm text-stone-700 leading-relaxed font-body">
-            <?= $page['content'] ?? '' ?>
+                    <?= sanitize_html($page['content'] ?? '') ?>
         </div>
 
         <div class="mt-8 text-xs text-stone-500 text-right">

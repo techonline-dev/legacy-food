@@ -35,6 +35,16 @@ class ContactController extends Controller {
             return;
         }
 
+        if (!\App\Core\RateLimiter::attempt('contact:' . client_ip(), 5, 3600)) {
+            if ($this->request->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Too many messages sent. Please try again later.'], 429);
+                return;
+            }
+            flash('error', 'Too many messages sent. Please try again later.');
+            $this->redirect('contact');
+            return;
+        }
+
         $errors = $this->validate([
             'name' => 'required|min:2',
             'email' => 'required|email',
@@ -89,6 +99,11 @@ class ContactController extends Controller {
     }
 
     public function subscribeNewsletter(): void {
+        if (!\App\Core\RateLimiter::attempt('newsletter:' . client_ip(), 5, 3600)) {
+            $this->json(['success' => false, 'error' => 'Too many requests. Please try again later.'], 429);
+            return;
+        }
+
         $email = strtolower(trim((string)$this->request->input('email')));
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->json(['success' => false, 'error' => 'Please enter a valid email address.'], 422);

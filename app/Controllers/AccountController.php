@@ -102,8 +102,9 @@ class AccountController extends Controller {
         ];
 
         if (!empty($password)) {
-            if (strlen($password) < 6) {
-                flash('error', 'New password must be at least 6 characters.');
+            $passwordError = password_policy_error($password);
+            if ($passwordError !== null) {
+                flash('error', $passwordError);
                 $this->redirect('account/profile');
                 return;
             }

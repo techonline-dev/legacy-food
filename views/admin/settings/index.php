@@ -289,7 +289,7 @@ $footerBadgesText = $footer['footer_badges_text'] ?? '100% NABL Accredited Lab V
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Razorpay Key Secret</label>
-                        <input type="password" name="razorpay_key_secret" value="<?= e($pay['razorpay_key_secret'] ?? '') ?>"
+                        <input type="password" name="razorpay_key_secret" value="" autocomplete="new-password" placeholder="<?= !empty($pay['razorpay_key_secret']) ? 'Configured - leave blank to keep unchanged' : 'Enter Razorpay key secret' ?>"
                                class="w-full py-2.5 px-3.5 rounded-xl bg-white border border-[#d6c7af] text-xs font-mono text-[#1c1917] focus:border-[#bc944c] focus:outline-none">
                     </div>
                 </div>

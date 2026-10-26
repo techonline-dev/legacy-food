@@ -2,6 +2,32 @@
 // Legacy Food — Interactive E-commerce Engine
 // ====================================================================
 
+// Attach CSRF token to same-origin state-changing fetch requests
+(function () {
+    const nativeFetch = window.fetch;
+    if (typeof nativeFetch !== 'function') return;
+
+    window.fetch = function (input, init) {
+        init = init || {};
+        try {
+            const requestUrl = typeof input === 'string' ? input : (input && input.url) || '';
+            const url = new URL(requestUrl, window.location.origin);
+            const method = String(init.method || (input && input.method) || 'GET').toUpperCase();
+            if (url.origin === window.location.origin && !['GET', 'HEAD', 'OPTIONS'].includes(method) && window.CSRF_TOKEN) {
+                const headers = new Headers(init.headers || (input && input.headers) || {});
+                headers.set('X-CSRF-Token', window.CSRF_TOKEN);
+                if (!headers.has('X-Requested-With')) {
+                    headers.set('X-Requested-With', 'XMLHttpRequest');
+                }
+                init.headers = headers;
+            }
+        } catch (err) {
+            // Fall through to native fetch
+        }
+        return nativeFetch.call(this, input, init);
+    };
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
     initHeaderScroll();
     initMobileMenu();
@@ -28,7 +54,9 @@ function showToast(message, type = 'success') {
         ? '<svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' 
         : '<svg class="w-5 h-5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
 
-    toast.innerHTML = `${icon} <span>${message}</span>`;
+    toast.innerHTML = `${icon} <span></span>`;
+    const text = toast.querySelector('span');
+    if (text) text.textContent = message;
     container.appendChild(toast);
 
     setTimeout(() => {

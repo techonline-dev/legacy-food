@@ -134,10 +134,43 @@ function initCheckoutForm() {
 
             const paymentMethod = form.querySelector('input[name="payment_method"]:checked')?.value || 'cod';
 
-            // If online payment (Razorpay / UPI) and key provided
-            if (paymentMethod !== 'cod' && typeof Razorpay !== 'undefined') {
+            // Demo mode (local development only) or real Razorpay checkout
+            if (paymentMethod !== 'cod') {
+                if (json.demo) {
+                    const verifyData = new FormData();
+                    verifyData.append('order_id', json.order_id);
+                    verifyData.append('demo', '1');
+
+                    const vRes = await fetch(window.APP_URL + '/checkout/verify-payment', {
+                        method: 'POST',
+                        body: verifyData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const vJson = await vRes.json();
+                    if (vJson.success) {
+                        window.location.href = vJson.redirect;
+                        return;
+                    }
+                    showToast(vJson.error || 'Payment verification failed', 'error');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                    return;
+                }
+
+                if (typeof Razorpay === 'undefined' || !json.key_id || !json.razorpay_order_id) {
+                    showToast('Online payment is unavailable right now. Please choose Cash on Delivery.', 'error');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                    return;
+                }
+
                 const options = {
-                    key: json.key_id || 'rzp_test_legacyfood123',
+                    key: json.key_id,
+                    order_id: json.razorpay_order_id,
                     amount: Math.round(json.total_amount * 100),
                     currency: 'INR',
                     name: 'Legacy Food',
@@ -147,8 +180,9 @@ function initCheckoutForm() {
                         // Server-side payment verification
                         const verifyData = new FormData();
                         verifyData.append('order_id', json.order_id);
+                        verifyData.append('razorpay_order_id', response.razorpay_order_id || json.razorpay_order_id);
                         verifyData.append('razorpay_payment_id', response.razorpay_payment_id);
-                        verifyData.append('razorpay_signature', response.razorpay_signature || 'sig_demo');
+                        verifyData.append('razorpay_signature', response.razorpay_signature || '');
 
                         const vRes = await fetch(window.APP_URL + '/checkout/verify-payment', {
                             method: 'POST',
@@ -182,7 +216,7 @@ function initCheckoutForm() {
                 });
                 rzp.open();
             } else {
-                // Cash on Delivery or redirect
+                // Cash on Delivery
                 window.location.href = json.redirect;
             }
         } catch (err) {

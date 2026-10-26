@@ -187,7 +187,7 @@ $whatsappEnquire = "https://wa.me/919845279936?text=" . urlencode("Hi Legacy, I'
                             Product Description
                         </h3>
                         <div class="text-xs md:text-sm text-stone-700 leading-relaxed space-y-4">
-                            <?= $product['description'] ?>
+                            <?= sanitize_html((string)$product['description']) ?>
                         </div>
                     </div>
 

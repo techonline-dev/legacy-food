@@ -3,9 +3,25 @@
 namespace App\Core;
 
 class Mailer {
+    private static function cleanHeader(string $value): string {
+        return trim(str_replace(["\r", "\n", "\0"], '', $value));
+    }
+
     public static function send(string $toEmail, string $toName, string $subject, string $htmlBody): bool {
-        $fromEmail = config('mail.from.address', 'contact@legacyfood.in');
-        $fromName = config('mail.from.name', 'Legacy Food');
+        $toEmail = self::cleanHeader($toEmail);
+        $toName = self::cleanHeader($toName);
+        $subject = self::cleanHeader($subject);
+
+        if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+            error_log('Mailer rejected invalid recipient address.');
+            return false;
+        }
+
+        $fromEmail = self::cleanHeader((string)config('mail.from.address', 'contact@legacyfood.in'));
+        $fromName = self::cleanHeader((string)config('mail.from.name', 'Legacy Food'));
+        if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+            $fromEmail = 'contact@legacyfood.in';
+        }
 
         $headers = [
             'MIME-Version: 1.0',
@@ -33,10 +49,15 @@ class Mailer {
     }
 
     private static function sendSmtp(string $to, string $subject, string $body, string $fromEmail, string $fromName): bool {
-        $host = config('mail.host');
+        $to = self::cleanHeader($to);
+        $subject = self::cleanHeader($subject);
+        $fromEmail = self::cleanHeader($fromEmail);
+        $fromName = self::cleanHeader($fromName);
+
+        $host = self::cleanHeader((string)config('mail.host'));
         $port = (int)config('mail.port', 587);
-        $user = config('mail.username');
-        $pass = config('mail.password');
+        $user = self::cleanHeader((string)config('mail.username'));
+        $pass = (string)config('mail.password');
 
         $socket = @fsockopen($host, $port, $errno, $errstr, 10);
         if (!$socket) return false;
@@ -147,7 +168,7 @@ class Mailer {
                                 <td style='background-color: #f7f1e1; padding: 24px 32px; border-top: 1px solid rgba(188, 148, 76, 0.2); font-size: 12px; color: #6d6b63; line-height: 1.5;'>
                                     <p style='margin: 0 0 8px 0; font-weight: 600; color: {$darkGreen};'>Legacy Food</p>
                                     <p style='margin: 0 0 12px 0;'>#286, 4th Cross, 8th Main, Dollars Colony, Bangalore 560078 | WhatsApp: +91 98452 79936</p>
-                                    <p style='margin: 0; font-size: 11px; color: #9c988e;'>© " . date('Y') . " Legacy Ghee. Pure, Traditionally Churned & Lab Certified.</p>
+                                    <p style='margin: 0; font-size: 11px; color: #9c988e;'>© " . date('Y') . " Legacy Ghee. Pure, Traditionally Churned &amp; Lab Certified.</p>
                                 </td>
                             </tr>
                         </table>

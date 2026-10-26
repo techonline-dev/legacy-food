@@ -8,6 +8,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Setting;
 use App\Core\Database;
+use App\Core\Razorpay;
 
 class CheckoutController extends Controller {
     public function index(): void {
@@ -30,7 +31,8 @@ class CheckoutController extends Controller {
             'cart' => $cartSummary,
             'user' => $user,
             'savedAddress' => $savedAddress,
-            'razorpayKey' => config('payment.razorpay.key_id'),
+            'razorpayKey' => razorpay_key_id(),
+            'paymentDemo' => payment_demo_enabled(),
         ]);
     }
 
@@ -42,6 +44,16 @@ class CheckoutController extends Controller {
             }
             flash('error', 'Security token expired. Please try again.');
             $this->redirect('checkout');
+            return;
+        }
+
+        if (!\App\Core\RateLimiter::attempt('checkout:' . client_ip(), 10, 3600)) {
+            if ($this->request->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Too many checkout attempts. Please wait and try again.'], 429);
+                return;
+            }
+            flash('error', 'Too many checkout attempts. Please wait and try again.');
+            $this->redirect('cart');
             return;
         }
 
@@ -104,21 +116,30 @@ class CheckoutController extends Controller {
         // Auto-create account if requested by guest during checkout
         if (!Auth::check() && $this->request->input('create_account')) {
             $accountPassword = (string)$this->request->input('account_password');
-            if (strlen($accountPassword) >= 6) {
-                $email = strtolower($customerData['email']);
-                $existingUser = Database::fetch("SELECT id FROM `users` WHERE `email` = :email LIMIT 1", ['email' => $email]);
-                if (!$existingUser) {
-                    $newUserId = Database::insert('users', [
-                        'name' => $customerData['name'],
-                        'email' => $email,
-                        'phone' => $customerData['phone'],
-                        'password' => password_hash($accountPassword, PASSWORD_BCRYPT),
-                        'status' => 'active'
-                    ]);
-                    $newUser = Database::fetch("SELECT * FROM `users` WHERE `id` = :id", ['id' => $newUserId]);
-                    if ($newUser) {
-                        Auth::login($newUser);
-                    }
+            $passwordError = password_policy_error($accountPassword);
+            if ($passwordError !== null) {
+                if ($this->request->isAjax()) {
+                    $this->json(['success' => false, 'error' => $passwordError], 422);
+                    return;
+                }
+                flash('error', $passwordError);
+                $this->redirect('checkout');
+                return;
+            }
+
+            $email = strtolower($customerData['email']);
+            $existingUser = Database::fetch("SELECT id FROM `users` WHERE `email` = :email LIMIT 1", ['email' => $email]);
+            if (!$existingUser) {
+                $newUserId = Database::insert('users', [
+                    'name' => $customerData['name'],
+                    'email' => $email,
+                    'phone' => $customerData['phone'],
+                    'password' => password_hash($accountPassword, PASSWORD_BCRYPT),
+                    'status' => 'active'
+                ]);
+                $newUser = Database::fetch("SELECT * FROM `users` WHERE `id` = :id", ['id' => $newUserId]);
+                if ($newUser) {
+                    Auth::login($newUser);
                 }
             }
         }
@@ -148,23 +169,70 @@ class CheckoutController extends Controller {
         }
 
         $orderNumber = $res['order_number'];
+        Order::rememberAccess((int)$res['order_id'], (string)$orderNumber);
 
         // If online payment (Razorpay / UPI / Card)
         if ($paymentMethod !== 'cod') {
-            $orderRecord = Order::getWithDetails($res['order_id']);
+            $orderRecord = Order::getWithDetails((int)$res['order_id']);
+            if (!$orderRecord) {
+                $this->json(['success' => false, 'error' => 'Order could not be loaded.'], 500);
+                return;
+            }
 
-            // If Ajax checkout with Razorpay SDK
+            $demo = payment_demo_enabled();
+            $gatewayOrderId = null;
+
+            if (!$demo) {
+                try {
+                    if (!Razorpay::configured()) {
+                        throw new \RuntimeException('Online payment is not configured yet. Please choose Cash on Delivery.');
+                    }
+                    $gatewayOrder = Razorpay::createOrder(
+                        (int)round(((float)$orderRecord['total_amount']) * 100),
+                        (string)$orderNumber,
+                        ['local_order_id' => (string)$res['order_id']]
+                    );
+                    $gatewayOrderId = (string)$gatewayOrder['id'];
+                    Database::insert('payments', [
+                        'order_id' => (int)$res['order_id'],
+                        'payment_method' => $paymentMethod,
+                        'gateway_order_id' => $gatewayOrderId,
+                        'amount' => $orderRecord['total_amount'],
+                        'currency' => 'INR',
+                        'status' => 'initiated',
+                    ]);
+                } catch (\Throwable $gatewayEx) {
+                    Order::updateStatus((int)$res['order_id'], 'cancelled');
+                    if ($this->request->isAjax()) {
+                        $this->json(['success' => false, 'error' => $gatewayEx->getMessage()], 502);
+                        return;
+                    }
+                    flash('error', $gatewayEx->getMessage());
+                    $this->redirect('checkout');
+                    return;
+                }
+            }
+
             if ($this->request->isAjax()) {
                 $this->json([
                     'success' => true,
-                    'order_id' => $res['order_id'],
+                    'order_id' => (int)$res['order_id'],
                     'order_number' => $orderNumber,
                     'total_amount' => $orderRecord['total_amount'],
                     'currency' => 'INR',
-                    'key_id' => config('payment.razorpay.key_id'),
+                    'key_id' => razorpay_key_id(),
+                    'razorpay_order_id' => $gatewayOrderId,
+                    'demo' => $demo,
                     'payment_method' => $paymentMethod,
                     'redirect' => url('checkout/success/' . $orderNumber)
                 ]);
+                return;
+            }
+
+            if (!$demo) {
+                Order::updateStatus((int)$res['order_id'], 'cancelled');
+                flash('error', 'Please enable JavaScript to complete online payment, or choose Cash on Delivery.');
+                $this->redirect('checkout');
                 return;
             }
         }
@@ -181,32 +249,124 @@ class CheckoutController extends Controller {
     }
 
     public function verifyPayment(): void {
-        $orderId = (int)$this->request->input('order_id');
-        $paymentId = $this->request->input('razorpay_payment_id') ?? $this->request->input('transaction_id');
-        $signature = $this->request->input('razorpay_signature');
+        if (!$this->validateCsrf()) {
+            $this->json(['success' => false, 'error' => 'Security token expired. Please refresh the page.'], 419);
+            return;
+        }
 
+        if (!\App\Core\RateLimiter::attempt('payment_verify:' . client_ip(), 20, 900)) {
+            $this->json(['success' => false, 'error' => 'Too many verification attempts. Please wait and try again.'], 429);
+            return;
+        }
+
+        $orderId = (int)$this->request->input('order_id');
         $order = Order::getWithDetails($orderId);
         if (!$order) {
             $this->json(['success' => false, 'error' => 'Order not found.'], 404);
             return;
         }
 
-        // Server-side verification
-        Database::update('orders', [
-            'status' => 'payment_confirmed',
-            'payment_status' => 'paid',
-            'transaction_id' => $paymentId ?: ('TXN_' . strtoupper(bin2hex(random_bytes(6))))
-        ], "`id` = :id", ['id' => $orderId]);
+        if (!Order::canAccess($order)) {
+            $this->json(['success' => false, 'error' => 'You are not authorized to verify this payment.'], 403);
+            return;
+        }
 
-        Database::insert('payments', [
-            'order_id' => $orderId,
-            'payment_method' => $order['payment_method'],
-            'gateway_payment_id' => $paymentId,
-            'gateway_signature' => $signature,
-            'amount' => $order['total_amount'],
-            'currency' => 'INR',
-            'status' => 'captured'
-        ]);
+        if ($order['payment_method'] === 'cod') {
+            $this->json(['success' => false, 'error' => 'This order does not require online payment.'], 400);
+            return;
+        }
+
+        if (($order['payment_status'] ?? '') === 'paid') {
+            $this->json([
+                'success' => true,
+                'message' => 'Payment was already verified.',
+                'redirect' => url('checkout/success/' . $order['order_number'])
+            ]);
+            return;
+        }
+
+        if (($order['status'] ?? '') === 'cancelled' || ($order['status'] ?? '') === 'refunded') {
+            $this->json(['success' => false, 'error' => 'This order can no longer be paid.'], 400);
+            return;
+        }
+
+        $demo = payment_demo_enabled();
+        $gatewayOrderId = '';
+        $paymentId = '';
+        $signature = '';
+
+        if ($demo) {
+            if (!$this->request->input('demo')) {
+                $this->json(['success' => false, 'error' => 'Invalid demo payment request.'], 400);
+                return;
+            }
+            $gatewayOrderId = 'demo_' . $orderId;
+            $paymentId = 'DEMO_' . strtoupper(bin2hex(random_bytes(8)));
+            $signature = 'demo';
+        } else {
+            $gatewayOrderId = trim((string)$this->request->input('razorpay_order_id', ''));
+            $paymentId = trim((string)$this->request->input('razorpay_payment_id', ''));
+            $signature = trim((string)$this->request->input('razorpay_signature', ''));
+
+            if ($gatewayOrderId === '' || $paymentId === '' || $signature === '') {
+                $this->json(['success' => false, 'error' => 'Incomplete payment verification data.'], 422);
+                return;
+            }
+
+            $paymentRecord = Database::fetch(
+                "SELECT * FROM `payments` WHERE `order_id` = :oid AND `gateway_order_id` IS NOT NULL ORDER BY `id` DESC LIMIT 1",
+                ['oid' => $orderId]
+            );
+            if (!$paymentRecord || !hash_equals((string)$paymentRecord['gateway_order_id'], $gatewayOrderId)) {
+                $this->json(['success' => false, 'error' => 'Payment reference does not match this order.'], 400);
+                return;
+            }
+
+            if (!Razorpay::verifySignature($gatewayOrderId, $paymentId, $signature)) {
+                $this->json(['success' => false, 'error' => 'Payment signature verification failed.'], 400);
+                return;
+            }
+        }
+
+        try {
+            Database::beginTransaction();
+
+            Database::update('orders', [
+                'status' => 'payment_confirmed',
+                'payment_status' => 'paid',
+                'transaction_id' => $paymentId
+            ], "`id` = :id AND `payment_status` = 'pending'", ['id' => $orderId]);
+
+            $existingPayment = Database::fetch("SELECT id FROM `payments` WHERE `order_id` = :oid ORDER BY `id` DESC LIMIT 1", ['oid' => $orderId]);
+            if ($existingPayment) {
+                Database::update('payments', [
+                    'gateway_payment_id' => $paymentId,
+                    'gateway_signature' => $signature,
+                    'status' => 'captured',
+                ], "`id` = :id", ['id' => $existingPayment['id']]);
+                if ($demo) {
+                    Database::update('payments', ['gateway_order_id' => $gatewayOrderId], "`id` = :id", ['id' => $existingPayment['id']]);
+                }
+            } else {
+                Database::insert('payments', [
+                    'order_id' => $orderId,
+                    'payment_method' => $order['payment_method'],
+                    'gateway_order_id' => $gatewayOrderId,
+                    'gateway_payment_id' => $paymentId,
+                    'gateway_signature' => $signature,
+                    'amount' => $order['total_amount'],
+                    'currency' => 'INR',
+                    'status' => 'captured'
+                ]);
+            }
+
+            Database::commit();
+        } catch (\Throwable $e) {
+            Database::rollBack();
+            error_log('Payment verification failed for order ' . $orderId . ': ' . $e->getMessage());
+            $this->json(['success' => false, 'error' => 'Payment could not be recorded. Please contact support.'], 500);
+            return;
+        }
 
         $this->json([
             'success' => true,
@@ -217,7 +377,7 @@ class CheckoutController extends Controller {
 
     public function success(string $orderNumber): void {
         $order = Order::getByNumber($orderNumber);
-        if (!$order) {
+        if (!$order || !Order::canAccess($order)) {
             $this->response->status(404);
             $this->view('errors.404', ['title' => 'Order Not Found']);
             return;

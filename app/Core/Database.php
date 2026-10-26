@@ -22,68 +22,35 @@ class Database {
             try {
                 self::$instance = self::connectPdo($host, $port, $dbName, $user, $pass, $charset);
             } catch (PDOException $e) {
-                $connections = config('database.connections', []);
-                $isLocal = config('database.is_local', false);
+                $unknownDatabase = ((string)$e->getCode() === '1049' || str_contains($e->getMessage(), 'Unknown database'));
 
-                // If production connection failed with 'localhost', try '127.0.0.1' (socket vs TCP fallback on Linux servers)
-                if ($target === 'production') {
-                    $altHost = ($host === 'localhost') ? '127.0.0.1' : ($host === '127.0.0.1' ? 'localhost' : null);
-                    if ($altHost !== null) {
-                        try {
-                            self::$instance = self::connectPdo($altHost, $port, $dbName, $user, $pass, $charset);
-                            error_log("Database notice: Connected to production DB using alternate host '{$altHost}'.");
-                            goto success;
-                        } catch (\Throwable $altHostEx) {
-                            // Proceed to other fallbacks
-                        }
+                if ($unknownDatabase && self::autoCreateEnabled()) {
+                    if (!preg_match('/^[A-Za-z0-9_]+$/', (string)$dbName)) {
+                        throw new \RuntimeException('Invalid database name configured.');
                     }
-                }
-
-                // If on local/dev machine and production was attempted, fall back to local database
-                if ($target === 'production' && $isLocal && isset($connections['local'])) {
-                    $alt = $connections['local'];
-                    try {
-                        self::$instance = self::connectPdo(
-                            $alt['host'],
-                            $alt['port'],
-                            $alt['database'],
-                            $alt['username'],
-                            $alt['password'],
-                            $alt['charset']
-                        );
-                        error_log("Database notice: Production connection unavailable on local dev. Seamlessly fell back to local database '{$alt['database']}'.");
-                        goto success;
-                    } catch (\Throwable $altEx) {
+                    $initPdo = new PDO("mysql:host={$host};port={$port};charset={$charset}", $user, $pass, [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+                    ]);
+                    $initPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                    unset($initPdo);
+                    self::$instance = self::connectPdo($host, $port, $dbName, $user, $pass, $charset);
+                } elseif ($target === 'production') {
+                    // Same-credentials host fallback (socket vs TCP) on some Linux hosts.
+                    $altHost = ($host === 'localhost') ? '127.0.0.1' : (($host === '127.0.0.1') ? 'localhost' : null);
+                    if ($altHost === null) {
                         throw $e;
                     }
-                }
-
-                // If target was resolved to local but local failed, try production profile
-                if ($target === 'local' && isset($connections['production'])) {
-                    $alt = $connections['production'];
                     try {
-                        self::$instance = self::connectPdo(
-                            $alt['host'],
-                            $alt['port'],
-                            $alt['database'],
-                            $alt['username'],
-                            $alt['password'],
-                            $alt['charset']
-                        );
-                        error_log("Database notice: Local connection unavailable. Seamlessly fell back to production database '{$alt['database']}'.");
-                        goto success;
-                    } catch (\Throwable $altEx) {
+                        self::$instance = self::connectPdo($altHost, $port, $dbName, $user, $pass, $charset);
+                    } catch (\Throwable $altHostEx) {
                         throw $e;
                     }
+                } else {
+                    throw $e;
                 }
-
-                throw $e;
             }
 
-            success:
-
-            // Check if tables are initialized
-            if (!self::$schemaChecked) {
+            if (self::autoMigrateEnabled() && !self::$schemaChecked) {
                 self::ensureTablesExist();
                 self::$schemaChecked = true;
             }
@@ -93,35 +60,20 @@ class Database {
     }
 
     private static function connectPdo(string $host, string|int $port, string $dbName, string $user, string $pass, string $charset): PDO {
-        try {
-            $dsn = "mysql:host={$host};port={$port};dbname={$dbName};charset={$charset}";
-            return new PDO($dsn, $user, $pass, [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-            ]);
-        } catch (PDOException $e) {
-            // If database does not exist (error 1049), auto-create it!
-            if ($e->getCode() == 1049 || str_contains($e->getMessage(), 'Unknown database')) {
-                $initPdo = new PDO("mysql:host={$host};port={$port};charset={$charset}", $user, $pass, [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-                ]);
-                $initPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-                unset($initPdo);
+        $dsn = "mysql:host={$host};port={$port};dbname={$dbName};charset={$charset}";
+        return new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ]);
+    }
 
-                $dsn = "mysql:host={$host};port={$port};dbname={$dbName};charset={$charset}";
-                $pdo = new PDO($dsn, $user, $pass, [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                ]);
+    private static function autoCreateEnabled(): bool {
+        return filter_var(env('DB_AUTO_CREATE', false), FILTER_VALIDATE_BOOLEAN);
+    }
 
-                // Run initial schema and seeds automatically
-                self::autoMigrate($pdo);
-                return $pdo;
-            }
-            throw $e;
-        }
+    private static function autoMigrateEnabled(): bool {
+        return filter_var(env('DB_AUTO_MIGRATE', false), FILTER_VALIDATE_BOOLEAN);
     }
 
     public static function ensureTablesExist(): void {

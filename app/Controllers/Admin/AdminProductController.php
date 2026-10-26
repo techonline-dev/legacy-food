@@ -410,20 +410,42 @@ class AdminProductController extends Controller {
         $this->redirect('admin/products');
     }
 
-    private function handleUpload(array $file): ?string {
-        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
-        if (!in_array($file['type'], $allowed)) return null;
+    private function handleUpload(array $file, string $prefix = 'prod'): ?string {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            return null;
+        }
+        if (($file['size'] ?? 0) <= 0 || $file['size'] > 5 * 1024 * 1024) {
+            return null;
+        }
+        if (!is_uploaded_file((string)$file['tmp_name'])) {
+            return null;
+        }
+
+        $allowed = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+        ];
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file((string)$file['tmp_name']);
+        if (!is_string($mime) || !isset($allowed[$mime])) {
+            return null;
+        }
+        if (@getimagesize((string)$file['tmp_name']) === false) {
+            return null;
+        }
 
         $targetDir = __DIR__ . '/../../public/assets/images/products/';
         if (!is_dir($targetDir)) {
             mkdir($targetDir, 0755, true);
         }
 
-        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $filename = 'prod_' . uniqid() . '.' . $ext;
+        $filename = $prefix . '_' . date('Ymd') . '_' . bin2hex(random_bytes(8)) . '.' . $allowed[$mime];
         $dest = $targetDir . $filename;
 
-        if (move_uploaded_file($file['tmp_name'], $dest)) {
+        if (move_uploaded_file((string)$file['tmp_name'], $dest)) {
+            @chmod($dest, 0644);
             return url('assets/images/products/' . $filename);
         }
         return null;
@@ -435,22 +457,19 @@ class AdminProductController extends Controller {
             return $uploadedUrls;
         }
 
-        $targetDir = __DIR__ . '/../../public/assets/images/products/';
-        if (!is_dir($targetDir)) {
-            mkdir($targetDir, 0755, true);
-        }
-
-        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
-        $count = count($files['name']);
+        $count = min(count($files['name']), 20);
 
         for ($i = 0; $i < $count; $i++) {
-            if ($files['error'][$i] === UPLOAD_ERR_OK && in_array($files['type'][$i], $allowed)) {
-                $ext = pathinfo($files['name'][$i], PATHINFO_EXTENSION);
-                $filename = 'gallery_' . uniqid() . '.' . $ext;
-                $dest = $targetDir . $filename;
-                if (move_uploaded_file($files['tmp_name'][$i], $dest)) {
-                    $uploadedUrls[] = url('assets/images/products/' . $filename);
-                }
+            $single = [
+                'name' => $files['name'][$i] ?? '',
+                'type' => $files['type'][$i] ?? '',
+                'tmp_name' => $files['tmp_name'][$i] ?? '',
+                'error' => $files['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+                'size' => $files['size'][$i] ?? 0,
+            ];
+            $uploaded = $this->handleUpload($single, 'gallery');
+            if ($uploaded !== null) {
+                $uploadedUrls[] = $uploaded;
             }
         }
 

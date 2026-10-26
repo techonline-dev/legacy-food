@@ -18,18 +18,24 @@ class AdminAuthController extends Controller {
     }
 
     public function login(): void {
-        $csrfValid = $this->validateCsrf();
-        $isLocal = (env('APP_ENV') === 'local' || in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1']));
-        if (!$csrfValid && !$isLocal) {
+        if (!$this->validateCsrf()) {
             flash('error', 'Security token expired. Please try again.');
             $this->redirect('admin/login');
             return;
         }
 
-        $email = trim((string)$this->request->input('email'));
+        $email = strtolower(trim((string)$this->request->input('email')));
         $password = (string)$this->request->input('password');
 
+        $rateKey = 'admin_login:' . client_ip() . ':' . $email;
+        if (!\App\Core\RateLimiter::attempt($rateKey, 5, 900)) {
+            flash('error', 'Too many admin login attempts. Please wait 15 minutes.');
+            $this->redirect('admin/login');
+            return;
+        }
+
         if (Auth::adminAttempt($email, $password)) {
+            \App\Core\RateLimiter::clear($rateKey);
             flash('success', 'Welcome to Legacy Food Admin Portal.');
             $this->redirect('admin');
             return;

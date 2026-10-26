@@ -8,7 +8,11 @@ use App\Core\Response;
 
 class AuthMiddleware {
     public function handle(Request $request, Response $response): bool {
-        if (!Auth::check()) {
+        $user = Auth::check() ? Auth::user() : null;
+        if (!$user || ($user['status'] ?? '') !== 'active') {
+            if (Auth::check()) {
+                Auth::logout();
+            }
             if ($request->isAjax()) {
                 $response->json(['success' => false, 'error' => 'Authentication required', 'redirect' => url('login')], 401);
                 return false;

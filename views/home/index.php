@@ -4,95 +4,144 @@
 <section id="hero-slider-section" class="w-full">
     <div id="ecommerce-slider" class="relative w-full overflow-hidden shadow-sm border-b border-[#e7dec8] bg-[#07160d] h-[calc(100vh-6rem)] md:h-[calc(100vh-7rem)] min-h-[560px] group flex items-center">
         
-        <!-- Slide 1: Pure Heritage Ghee -->
-        <div class="banner-slide absolute inset-0 transition-opacity duration-700 opacity-100 flex items-center">
-            <!-- Background Image & Gradient -->
-            <div class="absolute inset-0 z-0">
-                <img src="https://www.legacyfood.in/hero-desktop-1.png" alt="Pure Heritage Ghee" class="w-full h-full object-cover object-right md:object-center">
-                <div class="absolute inset-0 bg-gradient-to-r from-[#07160d]/95 via-[#07160d]/75 to-transparent"></div>
-            </div>
+        <?php if (!empty($banners)): ?>
+            <?php foreach ($banners as $idx => $b): ?>
+                <?php 
+                    $isVideo = ($b['media_type'] ?? '') === 'video' || (!empty($b['video_url']) && is_video_url($b['video_url']));
+                    $isFirst = ($idx === 0);
+                ?>
+                <div class="banner-slide absolute inset-0 transition-opacity duration-700 <?= $isFirst ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none' ?> flex items-center">
+                    <!-- Background Media & Gradient -->
+                    <div class="absolute inset-0 z-0 overflow-hidden">
+                        <?php if ($isVideo && !empty($b['video_url'])): ?>
+                            <?php if (is_embed_video_url($b['video_url'])): ?>
+                                <iframe src="<?= e(get_video_embed_url($b['video_url'], true, true, true, false)) ?>"
+                                        class="w-full h-full object-cover pointer-events-none scale-125"
+                                        frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            <?php else: ?>
+                                <video autoplay muted loop playsinline class="w-full h-full object-cover" poster="<?= e($b['image'] ?? '') ?>">
+                                    <source src="<?= e($b['video_url']) ?>">
+                                </video>
+                            <?php endif; ?>
+                        <?php elseif (!empty($b['image'])): ?>
+                            <img src="<?= e($b['image']) ?>" alt="<?= e($b['title']) ?>" class="w-full h-full object-cover object-right md:object-center">
+                        <?php else: ?>
+                            <div class="w-full h-full bg-[#07160d]"></div>
+                        <?php endif; ?>
+                        <div class="absolute inset-0 bg-gradient-to-r from-[#07160d]/95 via-[#07160d]/75 to-transparent"></div>
+                    </div>
 
-            <!-- Slide Content (Grid-Aligned with container-x) -->
-            <div class="container-x w-full relative z-10 py-10 md:py-16">
-                <div class="max-w-xl md:max-w-2xl">
-                    <span class="inline-block px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-[#bc944c] text-[#07160d] mb-4 shadow-sm">
-                        Traditional Bilona Churning
-                    </span>
-                    <h2 class="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight drop-shadow-sm">
-                        Pure Heritage Ghee
-                    </h2>
-                    <p class="mt-4 text-sm sm:text-base md:text-lg text-stone-200 line-clamp-3 max-w-lg leading-relaxed">
-                        Hand-churned from farm-fresh South Indian butter. Granular, aromatic, and 100% lab tested.
-                    </p>
-                    <div class="mt-6 sm:mt-8">
-                        <a href="<?= url('shop?category=ghee') ?>" class="btn-gold text-sm sm:text-base py-3 px-8 sm:py-3.5 sm:px-10 inline-flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all">
-                            <span>Shop Heritage Ghee</span>
-                            <span>→</span>
-                        </a>
+                    <!-- Slide Content -->
+                    <div class="container-x w-full relative z-10 py-10 md:py-16">
+                        <div class="max-w-xl md:max-w-2xl">
+                            <?php if (!empty($b['badge_text'] ?? '')): ?>
+                                <span class="inline-block px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-[#bc944c] text-[#07160d] mb-4 shadow-sm">
+                                    <?= e($b['badge_text']) ?>
+                                </span>
+                            <?php endif; ?>
+                            <h2 class="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight drop-shadow-sm">
+                                <?= e($b['title']) ?>
+                            </h2>
+                            <?php if (!empty($b['subtitle'])): ?>
+                                <p class="mt-4 text-sm sm:text-base md:text-lg text-stone-200 line-clamp-3 max-w-lg leading-relaxed">
+                                    <?= e($b['subtitle']) ?>
+                                </p>
+                            <?php endif; ?>
+                            <?php if (!empty($b['cta_text']) && !empty($b['cta_url'])): ?>
+                                <div class="mt-6 sm:mt-8">
+                                    <a href="<?= e(url($b['cta_url'])) ?>" class="btn-gold text-sm sm:text-base py-3 px-8 sm:py-3.5 sm:px-10 inline-flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all">
+                                        <span><?= e($b['cta_text']) ?></span>
+                                        <span>→</span>
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <!-- Fallback Default Slides -->
+            <!-- Slide 1: Pure Heritage Ghee -->
+            <div class="banner-slide absolute inset-0 transition-opacity duration-700 opacity-100 flex items-center">
+                <div class="absolute inset-0 z-0">
+                    <img src="https://www.legacyfood.in/hero-desktop-1.png" alt="Pure Heritage Ghee" class="w-full h-full object-cover object-right md:object-center">
+                    <div class="absolute inset-0 bg-gradient-to-r from-[#07160d]/95 via-[#07160d]/75 to-transparent"></div>
+                </div>
+                <div class="container-x w-full relative z-10 py-10 md:py-16">
+                    <div class="max-w-xl md:max-w-2xl">
+                        <span class="inline-block px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-[#bc944c] text-[#07160d] mb-4 shadow-sm">
+                            Traditional Bilona Churning
+                        </span>
+                        <h2 class="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight drop-shadow-sm">
+                            Pure Heritage Ghee
+                        </h2>
+                        <p class="mt-4 text-sm sm:text-base md:text-lg text-stone-200 line-clamp-3 max-w-lg leading-relaxed">
+                            Hand-churned from farm-fresh South Indian butter. Granular, aromatic, and 100% lab tested.
+                        </p>
+                        <div class="mt-6 sm:mt-8">
+                            <a href="<?= url('shop?category=ghee') ?>" class="btn-gold text-sm sm:text-base py-3 px-8 sm:py-3.5 sm:px-10 inline-flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all">
+                                <span>Shop Heritage Ghee</span>
+                                <span>→</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Slide 2: Wood-Pressed Oils -->
-        <div class="banner-slide absolute inset-0 transition-opacity duration-700 opacity-0 pointer-events-none flex items-center">
-            <!-- Background Image & Gradient -->
-            <div class="absolute inset-0 z-0">
-                <img src="https://www.legacyfood.in/hero-desktop-2.png" alt="Wood-Pressed Oils" class="w-full h-full object-cover object-right md:object-center">
-                <div class="absolute inset-0 bg-gradient-to-r from-[#07160d]/95 via-[#07160d]/75 to-transparent"></div>
-            </div>
-
-            <!-- Slide Content (Grid-Aligned with container-x) -->
-            <div class="container-x w-full relative z-10 py-10 md:py-16">
-                <div class="max-w-xl md:max-w-2xl">
-                    <span class="inline-block px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-[#bc944c] text-[#07160d] mb-4 shadow-sm">
-                        Cold-Pressed Below 45°C
-                    </span>
-                    <h2 class="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight drop-shadow-sm">
-                        Wood-Pressed Pure Oils
-                    </h2>
-                    <p class="mt-4 text-sm sm:text-base md:text-lg text-stone-200 line-clamp-3 max-w-lg leading-relaxed">
-                        Extracted on slow wooden chekkus from sun-dried seeds. Zero heat, zero chemicals.
-                    </p>
-                    <div class="mt-6 sm:mt-8">
-                        <a href="<?= url('shop?category=cold-pressed-oils') ?>" class="btn-gold text-sm sm:text-base py-3 px-8 sm:py-3.5 sm:px-10 inline-flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all">
-                            <span>Explore Pure Oils</span>
-                            <span>→</span>
-                        </a>
+            <!-- Slide 2: Wood-Pressed Oils -->
+            <div class="banner-slide absolute inset-0 transition-opacity duration-700 opacity-0 pointer-events-none flex items-center">
+                <div class="absolute inset-0 z-0">
+                    <img src="https://www.legacyfood.in/hero-desktop-2.png" alt="Wood-Pressed Oils" class="w-full h-full object-cover object-right md:object-center">
+                    <div class="absolute inset-0 bg-gradient-to-r from-[#07160d]/95 via-[#07160d]/75 to-transparent"></div>
+                </div>
+                <div class="container-x w-full relative z-10 py-10 md:py-16">
+                    <div class="max-w-xl md:max-w-2xl">
+                        <span class="inline-block px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-[#bc944c] text-[#07160d] mb-4 shadow-sm">
+                            Cold-Pressed Below 45°C
+                        </span>
+                        <h2 class="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight drop-shadow-sm">
+                            Wood-Pressed Pure Oils
+                        </h2>
+                        <p class="mt-4 text-sm sm:text-base md:text-lg text-stone-200 line-clamp-3 max-w-lg leading-relaxed">
+                            Extracted on slow wooden chekkus from sun-dried seeds. Zero heat, zero chemicals.
+                        </p>
+                        <div class="mt-6 sm:mt-8">
+                            <a href="<?= url('shop?category=cold-pressed-oils') ?>" class="btn-gold text-sm sm:text-base py-3 px-8 sm:py-3.5 sm:px-10 inline-flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all">
+                                <span>Explore Pure Oils</span>
+                                <span>→</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Slide 3: Special Welcome Offer -->
-        <div class="banner-slide absolute inset-0 transition-opacity duration-700 opacity-0 pointer-events-none flex items-center">
-            <!-- Background Image & Gradient -->
-            <div class="absolute inset-0 z-0">
-                <img src="https://www.legacyfood.in/Benefits.png" alt="Special Offer" class="w-full h-full object-cover object-right md:object-center">
-                <div class="absolute inset-0 bg-gradient-to-r from-[#07160d]/95 via-[#07160d]/80 to-transparent"></div>
-            </div>
-
-            <!-- Slide Content (Grid-Aligned with container-x) -->
-            <div class="container-x w-full relative z-10 py-10 md:py-16">
-                <div class="max-w-xl md:max-w-2xl">
-                    <span class="inline-block px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-[#bc944c] text-[#07160d] mb-4 shadow-sm">
-                        Welcome Discount
-                    </span>
-                    <h2 class="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight drop-shadow-sm">
-                        10% Off First Order
-                    </h2>
-                    <p class="mt-4 text-sm sm:text-base md:text-lg text-stone-200 line-clamp-3 max-w-lg leading-relaxed">
-                        Use coupon code <strong class="text-[#bc944c] font-mono">WELCOME10</strong> at checkout for an instant discount.
-                    </p>
-                    <div class="mt-6 sm:mt-8">
-                        <a href="<?= url('shop') ?>" class="btn-gold text-sm sm:text-base py-3 px-8 sm:py-3.5 sm:px-10 inline-flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all">
-                            <span>Shop All Products</span>
-                            <span>→</span>
-                        </a>
+            <!-- Slide 3: Special Welcome Offer -->
+            <div class="banner-slide absolute inset-0 transition-opacity duration-700 opacity-0 pointer-events-none flex items-center">
+                <div class="absolute inset-0 z-0">
+                    <img src="https://www.legacyfood.in/Benefits.png" alt="Special Offer" class="w-full h-full object-cover object-right md:object-center">
+                    <div class="absolute inset-0 bg-gradient-to-r from-[#07160d]/95 via-[#07160d]/80 to-transparent"></div>
+                </div>
+                <div class="container-x w-full relative z-10 py-10 md:py-16">
+                    <div class="max-w-xl md:max-w-2xl">
+                        <span class="inline-block px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-[#bc944c] text-[#07160d] mb-4 shadow-sm">
+                            Welcome Discount
+                        </span>
+                        <h2 class="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight drop-shadow-sm">
+                            10% Off First Order
+                        </h2>
+                        <p class="mt-4 text-sm sm:text-base md:text-lg text-stone-200 line-clamp-3 max-w-lg leading-relaxed">
+                            Use coupon code <strong class="text-[#bc944c] font-mono">WELCOME10</strong> at checkout for an instant discount.
+                        </p>
+                        <div class="mt-6 sm:mt-8">
+                            <a href="<?= url('shop') ?>" class="btn-gold text-sm sm:text-base py-3 px-8 sm:py-3.5 sm:px-10 inline-flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all">
+                                <span>Shop All Products</span>
+                                <span>→</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        <?php endif; ?>
 
         <!-- Navigation Arrow Left -->
         <button id="slider-prev-btn" class="absolute left-4 md:left-8 lg:left-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 md:w-14 md:h-14 rounded-full bg-white/90 hover:bg-[#bc944c] text-[#07160d] hover:text-white shadow-lg flex items-center justify-center transition-all duration-200 opacity-80 group-hover:opacity-100" aria-label="Previous Slide">
@@ -104,11 +153,14 @@
             <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
         </button>
 
-        <!-- Pagination Dots -->
+        <!-- Dynamic Pagination Dots -->
         <div id="slider-dots" class="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-            <button class="slider-dot w-6 h-2 rounded-full bg-[#bc944c] transition-all" data-index="0" aria-label="Slide 1"></button>
-            <button class="slider-dot w-2 h-2 rounded-full bg-white/60 hover:bg-white transition-all" data-index="1" aria-label="Slide 2"></button>
-            <button class="slider-dot w-2 h-2 rounded-full bg-white/60 hover:bg-white transition-all" data-index="2" aria-label="Slide 3"></button>
+            <?php 
+                $slideCount = !empty($banners) ? count($banners) : 3;
+                for ($d = 0; $d < $slideCount; $d++):
+            ?>
+                <button class="slider-dot <?= $d === 0 ? 'w-6 h-2 bg-[#bc944c]' : 'w-2 h-2 bg-white/60 hover:bg-white' ?> rounded-full transition-all" data-index="<?= $d ?>" aria-label="Slide <?= $d + 1 ?>"></button>
+            <?php endfor; ?>
         </div>
     </div>
 </section>

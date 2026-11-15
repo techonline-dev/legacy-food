@@ -70,6 +70,13 @@ class AdminProductController extends Controller {
             if ($uploaded) $image = $uploaded;
         }
 
+        // Handle uploaded video file or remote video url
+        $videoUrl = sanitize($this->request->input('video_url', ''));
+        if (isset($_FILES['video_file']) && $_FILES['video_file']['error'] === UPLOAD_ERR_OK) {
+            $uploadedVideo = $this->uploadMediaFile($_FILES['video_file'], 'products', 'prod_vid');
+            if ($uploadedVideo) $videoUrl = $uploadedVideo['url'];
+        }
+
         $gstRateInput = $this->request->input('gst_rate');
         $gstRate = ($gstRateInput !== null && $gstRateInput !== '') ? (float)$gstRateInput : null;
         $hsnCode = trim((string)$this->request->input('hsn_code', ''));
@@ -86,6 +93,7 @@ class AdminProductController extends Controller {
             'benefits' => $this->request->input('benefits'),
             'ingredients' => $this->request->input('ingredients'),
             'featured_image' => $image ?: 'https://cdn.sanity.io/images/dwps51kj/production/adbe8001d264661c9bbd49ef61f0f8d00894dba9-1080x1080.png?w=640',
+            'video_url' => $videoUrl ?: null,
             'base_price' => (float)$this->request->input('base_price'),
             'sale_price' => $this->request->input('sale_price') ? (float)$this->request->input('sale_price') : null,
             'gst_rate' => $gstRate,
@@ -146,14 +154,15 @@ class AdminProductController extends Controller {
             ]);
         }
 
-        // Process Gallery Images (multiple uploads + URLs)
+        // Process Gallery Media (multiple uploads + URLs for images & videos)
         $gallerySort = 0;
         if (isset($_FILES['gallery_files'])) {
-            $uploadedGallery = $this->handleMultipleUploads($_FILES['gallery_files']);
-            foreach ($uploadedGallery as $gUrl) {
+            $uploadedGallery = $this->uploadMultipleMediaFiles($_FILES['gallery_files'], 'products', 'gallery');
+            foreach ($uploadedGallery as $gItem) {
                 Database::insert('product_images', [
                     'product_id' => $productId,
-                    'image_url' => $gUrl,
+                    'image_url' => $gItem['url'],
+                    'media_type' => $gItem['type'] ?? 'image',
                     'alt_text' => $name,
                     'sort_order' => $gallerySort++
                 ]);
@@ -163,11 +172,12 @@ class AdminProductController extends Controller {
         if (!empty($galleryUrls)) {
             $urlsList = is_array($galleryUrls) ? $galleryUrls : preg_split('/[\r\n]+/', (string)$galleryUrls);
             foreach ($urlsList as $urlItem) {
-                $urlItem = trim($urlItem);
-                if (filter_var($urlItem, FILTER_VALIDATE_URL)) {
+                $urlItem = trim((string)$urlItem);
+                if (filter_var($urlItem, FILTER_VALIDATE_URL) || str_starts_with($urlItem, '/')) {
                     Database::insert('product_images', [
                         'product_id' => $productId,
                         'image_url' => $urlItem,
+                        'media_type' => media_type_of($urlItem),
                         'alt_text' => $name,
                         'sort_order' => $gallerySort++
                     ]);
@@ -229,6 +239,12 @@ class AdminProductController extends Controller {
             if ($uploaded) $image = $uploaded;
         }
 
+        $videoUrl = sanitize($this->request->input('video_url', $product['video_url'] ?? ''));
+        if (isset($_FILES['video_file']) && $_FILES['video_file']['error'] === UPLOAD_ERR_OK) {
+            $uploadedVideo = $this->uploadMediaFile($_FILES['video_file'], 'products', 'prod_vid');
+            if ($uploadedVideo) $videoUrl = $uploadedVideo['url'];
+        }
+
         $gstRateInput = $this->request->input('gst_rate');
         $gstRate = ($gstRateInput !== null && $gstRateInput !== '') ? (float)$gstRateInput : null;
         $hsnCode = trim((string)$this->request->input('hsn_code', ''));
@@ -245,6 +261,7 @@ class AdminProductController extends Controller {
             'benefits' => $this->request->input('benefits'),
             'ingredients' => $this->request->input('ingredients'),
             'featured_image' => $image,
+            'video_url' => $videoUrl ?: null,
             'base_price' => (float)$this->request->input('base_price'),
             'sale_price' => $this->request->input('sale_price') ? (float)$this->request->input('sale_price') : null,
             'gst_rate' => $gstRate,
@@ -324,15 +341,16 @@ class AdminProductController extends Controller {
             }
         }
 
-        // Handle gallery images uploads in update
+        // Handle gallery media uploads in update (images & videos)
         $existingCount = (int)(Database::fetch("SELECT COUNT(*) as c FROM `product_images` WHERE `product_id` = :pid", ['pid' => $id])['c'] ?? 0);
         $gallerySort = $existingCount;
         if (isset($_FILES['gallery_files'])) {
-            $uploadedGallery = $this->handleMultipleUploads($_FILES['gallery_files']);
-            foreach ($uploadedGallery as $gUrl) {
+            $uploadedGallery = $this->uploadMultipleMediaFiles($_FILES['gallery_files'], 'products', 'gallery');
+            foreach ($uploadedGallery as $gItem) {
                 Database::insert('product_images', [
                     'product_id' => $id,
-                    'image_url' => $gUrl,
+                    'image_url' => $gItem['url'],
+                    'media_type' => $gItem['type'] ?? 'image',
                     'alt_text' => $name,
                     'sort_order' => $gallerySort++
                 ]);
@@ -342,11 +360,12 @@ class AdminProductController extends Controller {
         if (!empty($galleryUrls)) {
             $urlsList = is_array($galleryUrls) ? $galleryUrls : preg_split('/[\r\n]+/', (string)$galleryUrls);
             foreach ($urlsList as $urlItem) {
-                $urlItem = trim($urlItem);
-                if (filter_var($urlItem, FILTER_VALIDATE_URL)) {
+                $urlItem = trim((string)$urlItem);
+                if (filter_var($urlItem, FILTER_VALIDATE_URL) || str_starts_with($urlItem, '/')) {
                     Database::insert('product_images', [
                         'product_id' => $id,
                         'image_url' => $urlItem,
+                        'media_type' => media_type_of($urlItem),
                         'alt_text' => $name,
                         'sort_order' => $gallerySort++
                     ]);
@@ -411,68 +430,11 @@ class AdminProductController extends Controller {
     }
 
     private function handleUpload(array $file, string $prefix = 'prod'): ?string {
-        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            return null;
-        }
-        if (($file['size'] ?? 0) <= 0 || $file['size'] > 5 * 1024 * 1024) {
-            return null;
-        }
-        if (!is_uploaded_file((string)$file['tmp_name'])) {
-            return null;
-        }
-
-        $allowed = [
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/webp' => 'webp',
-        ];
-
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->file((string)$file['tmp_name']);
-        if (!is_string($mime) || !isset($allowed[$mime])) {
-            return null;
-        }
-        if (@getimagesize((string)$file['tmp_name']) === false) {
-            return null;
-        }
-
-        $targetDir = __DIR__ . '/../../public/assets/images/products/';
-        if (!is_dir($targetDir)) {
-            mkdir($targetDir, 0755, true);
-        }
-
-        $filename = $prefix . '_' . date('Ymd') . '_' . bin2hex(random_bytes(8)) . '.' . $allowed[$mime];
-        $dest = $targetDir . $filename;
-
-        if (move_uploaded_file((string)$file['tmp_name'], $dest)) {
-            @chmod($dest, 0644);
-            return url('assets/images/products/' . $filename);
-        }
-        return null;
+        $res = $this->uploadMediaFile($file, 'products', $prefix);
+        return $res ? $res['url'] : null;
     }
 
     private function handleMultipleUploads(array $files): array {
-        $uploadedUrls = [];
-        if (!isset($files['name']) || !is_array($files['name'])) {
-            return $uploadedUrls;
-        }
-
-        $count = min(count($files['name']), 20);
-
-        for ($i = 0; $i < $count; $i++) {
-            $single = [
-                'name' => $files['name'][$i] ?? '',
-                'type' => $files['type'][$i] ?? '',
-                'tmp_name' => $files['tmp_name'][$i] ?? '',
-                'error' => $files['error'][$i] ?? UPLOAD_ERR_NO_FILE,
-                'size' => $files['size'][$i] ?? 0,
-            ];
-            $uploaded = $this->handleUpload($single, 'gallery');
-            if ($uploaded !== null) {
-                $uploadedUrls[] = $uploaded;
-            }
-        }
-
-        return $uploadedUrls;
+        return $this->uploadMultipleMediaFiles($files, 'products', 'gallery');
     }
 }

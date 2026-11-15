@@ -121,6 +121,31 @@ class Database {
                         self::$instance->exec("ALTER TABLE `product_categories` ADD COLUMN `meta_description` TEXT NULL DEFAULT NULL AFTER `meta_title`");
                     }
 
+                    // Ensure video_url exists on products
+                    $hasVideoUrl = self::$instance->query("SHOW COLUMNS FROM `products` LIKE 'video_url'")->rowCount();
+                    if ($hasVideoUrl === 0) {
+                        self::$instance->exec("ALTER TABLE `products` ADD COLUMN `video_url` VARCHAR(255) NULL DEFAULT NULL AFTER `featured_image`");
+                    }
+
+                    // Ensure media_type exists on product_images
+                    $hasMediaCol = self::$instance->query("SHOW COLUMNS FROM `product_images` LIKE 'media_type'")->rowCount();
+                    if ($hasMediaCol === 0) {
+                        self::$instance->exec("ALTER TABLE `product_images` ADD COLUMN `media_type` ENUM('image', 'video') DEFAULT 'image' AFTER `image_url`");
+                    }
+
+                    // Ensure video and media_type exist on banners
+                    $hasBannerVideo = self::$instance->query("SHOW COLUMNS FROM `banners` LIKE 'video_url'")->rowCount();
+                    if ($hasBannerVideo === 0) {
+                        self::$instance->exec("ALTER TABLE `banners` ADD COLUMN `video_url` VARCHAR(255) NULL DEFAULT NULL AFTER `mobile_image`");
+                    }
+                    $hasBannerMediaType = self::$instance->query("SHOW COLUMNS FROM `banners` LIKE 'media_type'")->rowCount();
+                    if ($hasBannerMediaType === 0) {
+                        self::$instance->exec("ALTER TABLE `banners` ADD COLUMN `media_type` ENUM('image', 'video') DEFAULT 'image' AFTER `video_url`");
+                    }
+                    try {
+                        self::$instance->exec("ALTER TABLE `banners` MODIFY COLUMN `image` VARCHAR(255) NULL DEFAULT NULL");
+                    } catch (\Throwable $t) {}
+
                     // Ensure menu_items table exists
                     $hasMenuItems = self::$instance->query("SHOW TABLES LIKE 'menu_items'")->rowCount();
                     if ($hasMenuItems === 0) {

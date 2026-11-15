@@ -391,3 +391,100 @@ if (!function_exists('old')) {
         return $_SESSION['_old_input'][$key] ?? $default;
     }
 }
+
+if (!function_exists('is_video_url')) {
+    function is_video_url(?string $url): bool {
+        if (!$url) return false;
+        $url = trim($url);
+        if ($url === '') return false;
+        
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        if (in_array($ext, ['mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v', 'avi', 'mkv'], true)) {
+            return true;
+        }
+
+        $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
+        if (str_contains($host, 'youtube.com') || str_contains($host, 'youtu.be') || str_contains($host, 'vimeo.com')) {
+            return true;
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('is_embed_video_url')) {
+    function is_embed_video_url(?string $url): bool {
+        if (!$url) return false;
+        $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
+        return str_contains($host, 'youtube.com') || str_contains($host, 'youtu.be') || str_contains($host, 'vimeo.com');
+    }
+}
+
+if (!function_exists('get_video_embed_url')) {
+    function get_video_embed_url(?string $url, bool $autoplay = true, bool $loop = true, bool $mute = true, bool $controls = false): ?string {
+        if (!$url) return null;
+        $url = trim($url);
+        $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
+
+        // YouTube
+        if (str_contains($host, 'youtube.com') || str_contains($host, 'youtu.be')) {
+            $videoId = '';
+            if (str_contains($host, 'youtu.be')) {
+                $videoId = trim(parse_url($url, PHP_URL_PATH) ?? '', '/');
+            } elseif (str_contains($url, 'youtube.com/embed/')) {
+                $parts = explode('/embed/', $url);
+                $videoId = explode('?', $parts[1] ?? '')[0];
+            } else {
+                parse_str(parse_url($url, PHP_URL_QUERY) ?? '', $queryParams);
+                $videoId = $queryParams['v'] ?? '';
+            }
+
+            if (!empty($videoId)) {
+                $params = [
+                    'enablejsapi' => '1',
+                    'rel' => '0',
+                ];
+                if ($autoplay) $params['autoplay'] = '1';
+                if ($mute) $params['mute'] = '1';
+                if ($loop) {
+                    $params['loop'] = '1';
+                    $params['playlist'] = $videoId;
+                }
+                if (!$controls) {
+                    $params['controls'] = '0';
+                    $params['playsinline'] = '1';
+                } else {
+                    $params['controls'] = '1';
+                    $params['playsinline'] = '1';
+                }
+                return 'https://www.youtube-nocookie.com/embed/' . rawurlencode($videoId) . '?' . http_build_query($params);
+            }
+        }
+
+        // Vimeo
+        if (str_contains($host, 'vimeo.com')) {
+            $path = trim(parse_url($url, PHP_URL_PATH) ?? '', '/');
+            $segments = explode('/', $path);
+            $videoId = end($segments);
+            if (is_numeric($videoId)) {
+                $params = [];
+                if ($autoplay) $params['autoplay'] = '1';
+                if ($mute) $params['muted'] = '1';
+                if ($loop) $params['loop'] = '1';
+                if (!$controls) {
+                    $params['background'] = '1';
+                }
+                return 'https://player.vimeo.com/video/' . $videoId . ($params ? '?' . http_build_query($params) : '');
+            }
+        }
+
+        return $url;
+    }
+}
+
+if (!function_exists('media_type_of')) {
+    function media_type_of(?string $url): string {
+        return is_video_url($url) ? 'video' : 'image';
+    }
+}

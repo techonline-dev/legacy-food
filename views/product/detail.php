@@ -39,18 +39,75 @@ $whatsappEnquire = "https://wa.me/919845279936?text=" . urlencode("Hi Legacy, I'
 
         <!-- Main Product Section: Gallery + Purchase Form -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
-            <!-- Left: Product Image Gallery -->
+            <!-- Left: Product Image & Video Gallery -->
             <div class="space-y-4">
-                <div class="bg-white border border-[#e7dec8] rounded-3xl p-6 md:p-10 flex items-center justify-center relative overflow-hidden shadow-sm">
+                <div class="bg-white border border-[#e7dec8] rounded-3xl p-6 md:p-10 flex items-center justify-center relative overflow-hidden shadow-sm min-h-[380px] md:min-h-[460px]">
                     <img id="main-product-img" src="<?= e($product['featured_image']) ?>" alt="<?= e($product['name']) ?>" class="product-main-image max-h-[380px] md:max-h-[460px] w-auto object-contain transition-transform duration-500 hover:scale-105 drop-shadow-[0_16px_30px_rgba(0,0,0,0.12)]">
+
+                    <!-- Video Player Container (Hidden by default) -->
+                    <div id="main-product-video-wrap" class="hidden w-full h-full flex items-center justify-center">
+                        <video id="main-product-video" controls class="max-h-[380px] md:max-h-[460px] w-full rounded-2xl bg-black"></video>
+                    </div>
+
+                    <!-- Embed Iframe Container (for YouTube/Vimeo) -->
+                    <div id="main-product-embed-wrap" class="hidden w-full h-[360px] md:h-[440px] flex items-center justify-center">
+                        <iframe id="main-product-iframe" src="" class="w-full h-full rounded-2xl" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
                 </div>
 
-                <!-- Thumbnails Gallery if multiple images exist -->
-                <?php if (!empty($product['images']) && count($product['images']) > 1): ?>
-                    <div class="flex gap-3 overflow-x-auto pb-2">
-                        <?php foreach ($product['images'] as $img): ?>
-                            <button onclick="document.getElementById('main-product-img').src = '<?= e($img['image_url']) ?>'" class="w-16 h-16 rounded-2xl border border-[#d6c7af] p-1.5 bg-white hover:border-[#bc944c] shadow-sm shrink-0">
-                                <img src="<?= e($img['image_url']) ?>" class="w-full h-full object-contain">
+                <!-- Thumbnails Gallery (Images & Videos) -->
+                <?php 
+                    $allMedia = [];
+                    // 1. Featured image
+                    if (!empty($product['featured_image'])) {
+                        $allMedia[] = [
+                            'url' => $product['featured_image'],
+                            'type' => 'image',
+                            'title' => $product['name']
+                        ];
+                    }
+                    // 2. Featured video if present
+                    if (!empty($product['video_url'])) {
+                        $allMedia[] = [
+                            'url' => $product['video_url'],
+                            'type' => 'video',
+                            'title' => 'Product Video'
+                        ];
+                    }
+                    // 3. Gallery items
+                    if (!empty($product['images'])) {
+                        foreach ($product['images'] as $gImg) {
+                            $mediaType = ($gImg['media_type'] ?? '') ?: (is_video_url($gImg['image_url']) ? 'video' : 'image');
+                            $allMedia[] = [
+                                'url' => $gImg['image_url'],
+                                'type' => $mediaType,
+                                'title' => $gImg['alt_text'] ?: $product['name']
+                            ];
+                        }
+                    }
+                ?>
+
+                <?php if (count($allMedia) > 1): ?>
+                    <div class="flex gap-3 overflow-x-auto pb-2" id="product-thumbnails-bar">
+                        <?php foreach ($allMedia as $mIdx => $m): ?>
+                            <?php 
+                                $isVid = ($m['type'] === 'video');
+                                $isEmbed = $isVid && is_embed_video_url($m['url']);
+                                $embedUrl = $isEmbed ? get_video_embed_url($m['url'], true, false, false, true) : '';
+                            ?>
+                            <button type="button" 
+                                    class="product-thumb-btn w-16 h-16 rounded-2xl border <?= $mIdx === 0 ? 'border-[#bc944c] ring-2 ring-[#bc944c]/30' : 'border-[#d6c7af]' ?> p-1 bg-white hover:border-[#bc944c] shadow-sm shrink-0 relative overflow-hidden transition-all flex items-center justify-center"
+                                    data-type="<?= $m['type'] ?>"
+                                    data-url="<?= e($m['url']) ?>"
+                                    data-embed="<?= e($embedUrl) ?>">
+                                <?php if ($isVid): ?>
+                                    <div class="w-full h-full bg-stone-900 rounded-xl flex items-center justify-center text-white relative">
+                                        <svg class="w-6 h-6 text-[#bc944c]" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                        <span class="absolute bottom-0.5 inset-x-0 text-[8px] font-bold text-center bg-black/60 text-white uppercase py-0.5">Video</span>
+                                    </div>
+                                <?php else: ?>
+                                    <img src="<?= e($m['url']) ?>" class="w-full h-full object-contain">
+                                <?php endif; ?>
                             </button>
                         <?php endforeach; ?>
                     </div>
@@ -345,3 +402,69 @@ $whatsappEnquire = "https://wa.me/919845279936?text=" . urlencode("Hi Legacy, I'
         <?php endif; ?>
     </div>
 </div>
+
+<script>
+function selectProductMedia(type, url, embedUrl) {
+    const mainImg = document.getElementById('main-product-img');
+    const vidWrap = document.getElementById('main-product-video-wrap');
+    const vidElem = document.getElementById('main-product-video');
+    const embWrap = document.getElementById('main-product-embed-wrap');
+    const embElem = document.getElementById('main-product-iframe');
+
+    if (vidElem) {
+        vidElem.pause();
+        vidElem.src = '';
+    }
+    if (embElem) {
+        embElem.src = '';
+    }
+
+    if (type === 'video') {
+        if (mainImg) mainImg.classList.add('hidden');
+        if (embedUrl) {
+            if (vidWrap) vidWrap.classList.add('hidden');
+            if (embWrap) embWrap.classList.remove('hidden');
+            if (embElem) embElem.src = embedUrl;
+        } else {
+            if (embWrap) embWrap.classList.add('hidden');
+            if (vidWrap) vidWrap.classList.remove('hidden');
+            if (vidElem) {
+                vidElem.src = url;
+                vidElem.play().catch(() => {});
+            }
+        }
+    } else {
+        if (vidWrap) vidWrap.classList.add('hidden');
+        if (embWrap) embWrap.classList.add('hidden');
+        if (mainImg) {
+            mainImg.classList.remove('hidden');
+            mainImg.src = url;
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const thumbs = document.querySelectorAll('.product-thumb-btn');
+    thumbs.forEach(btn => {
+        btn.addEventListener('click', function() {
+            thumbs.forEach(t => t.classList.remove('border-[#bc944c]', 'ring-2', 'ring-[#bc944c]/30'));
+            this.classList.add('border-[#bc944c]', 'ring-2', 'ring-[#bc944c]/30');
+            const type = this.dataset.type;
+            const url = this.dataset.url;
+            const embed = this.dataset.embed;
+            selectProductMedia(type, url, embed);
+        });
+    });
+
+    // Variant selector button interaction
+    document.querySelectorAll('.variant-selector-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const img = this.dataset.image;
+            if (img) {
+                thumbs.forEach(t => t.classList.remove('border-[#bc944c]', 'ring-2', 'ring-[#bc944c]/30'));
+                selectProductMedia('image', img, '');
+            }
+        });
+    });
+});
+</script>

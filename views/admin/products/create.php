@@ -274,26 +274,53 @@
                     </div>
                 </div>
 
-                <!-- Product Gallery Images (Multiple) -->
+                <!-- Product Featured Video / Promo Reel -->
                 <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-4">
                     <div class="flex items-center justify-between">
-                        <h2 class="font-display text-base font-bold text-[#07160d]">Product Gallery (Multiple)</h2>
-                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#faf8f5] text-[#bc944c] border border-[#d6c7af] font-semibold">Multi-Angle</span>
+                        <h2 class="font-display text-base font-bold text-[#07160d]">Product Video (Optional)</h2>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-semibold">Video Reel</span>
                     </div>
-                    <p class="text-[11px] text-stone-500">Upload multiple gallery photos or supply URLs for customer thumbnail gallery.</p>
+
+                    <!-- Live Video Preview Box -->
+                    <div class="text-center p-3 bg-stone-50 rounded-xl border border-[#e7dec8] hidden" id="video-preview-box">
+                        <video id="featured-preview-video" controls class="max-h-40 mx-auto rounded-lg bg-black border border-[#e7dec8]"></video>
+                        <span class="text-[10px] text-stone-500 mt-1.5 block">Video Preview</span>
+                    </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Upload Multiple Images</label>
-                        <input type="file" id="gallery_files_input" name="gallery_files[]" multiple accept="image/*"
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Video URL (MP4 / YouTube / Vimeo)</label>
+                        <input type="text" id="video_url_input" name="video_url" placeholder="https://...mp4 or YouTube link"
+                               class="w-full py-2 px-3 rounded-xl bg-white border border-[#d6c7af] text-xs text-[#1c1917] focus:border-[#bc944c] focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Or Upload Video File (MP4, WebM, MOV)</label>
+                        <input type="file" id="video_file_input" name="video_file" accept="video/*"
+                               class="w-full text-xs text-stone-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#bc944c] file:text-[#07160d] hover:file:bg-[#d8bd99] cursor-pointer">
+                        <p class="text-[10px] text-stone-400 mt-1">Accepts MP4, WebM, MOV files up to 100MB.</p>
+                    </div>
+                </div>
+
+                <!-- Product Gallery Media (Images & Videos) -->
+                <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-display text-base font-bold text-[#07160d]">Product Gallery (Images & Videos)</h2>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#faf8f5] text-[#bc944c] border border-[#d6c7af] font-semibold">Multi-Media</span>
+                    </div>
+                    <p class="text-[11px] text-stone-500">Upload multiple photos or video clips, or paste media URLs for thumbnail gallery.</p>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Upload Multiple Files (Images & Videos)</label>
+                        <input type="file" id="gallery_files_input" name="gallery_files[]" multiple accept="image/*,video/*"
                                class="w-full text-xs text-stone-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#bc944c] file:text-[#07160d] hover:file:bg-[#d8bd99] cursor-pointer">
                         <div id="gallery-preview-container" class="mt-3 flex flex-wrap gap-2 empty:hidden"></div>
                     </div>
 
                     <div class="pt-2 border-t border-stone-100">
-                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Or Paste Gallery Image URLs</label>
-                        <textarea name="gallery_urls" rows="2" placeholder="https://example.com/img1.jpg&#10;https://example.com/img2.jpg"
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Or Paste Media URLs (Images & Videos)</label>
+                        <textarea name="gallery_urls" rows="2" placeholder="https://example.com/img1.jpg&#10;https://example.com/video1.mp4&#10;https://youtube.com/..."
                                   class="w-full py-2 px-3 rounded-xl bg-white border border-[#d6c7af] text-xs font-mono text-[#1c1917] focus:border-[#bc944c] focus:outline-none"></textarea>
-                        <p class="text-[10px] text-stone-400 mt-1">One URL per line.</p>
+                        <p class="text-[10px] text-stone-400 mt-1">One URL per line. Supports image URLs, direct video links (.mp4), and YouTube links.</p>
                     </div>
                 </div>
             </div>
@@ -329,21 +356,62 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Gallery Files Preview
+    // Video Preview
+    const videoInput = document.getElementById('video_url_input');
+    const videoFileInput = document.getElementById('video_file_input');
+    const videoBox = document.getElementById('video-preview-box');
+    const videoPreview = document.getElementById('featured-preview-video');
+
+    if (videoInput && videoPreview && videoBox) {
+        videoInput.addEventListener('input', function() {
+            const val = this.value.trim();
+            if (val) {
+                videoBox.classList.remove('hidden');
+                videoPreview.src = val;
+            } else if (!videoFileInput.files.length) {
+                videoBox.classList.add('hidden');
+            }
+        });
+    }
+
+    if (videoFileInput && videoPreview && videoBox) {
+        videoFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                videoBox.classList.remove('hidden');
+                videoPreview.src = URL.createObjectURL(file);
+            }
+        });
+    }
+
+    // Gallery Files Preview (Images & Videos)
     const galleryInput = document.getElementById('gallery_files_input');
     const galleryContainer = document.getElementById('gallery-preview-container');
     if (galleryInput && galleryContainer) {
         galleryInput.addEventListener('change', function(e) {
             galleryContainer.innerHTML = '';
             Array.from(e.target.files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    const thumb = document.createElement('div');
-                    thumb.className = 'w-14 h-14 rounded-lg border border-[#d6c7af] bg-white p-1 overflow-hidden shadow-xs';
-                    thumb.innerHTML = `<img src="${evt.target.result}" class="w-full h-full object-contain">`;
+                const isVid = file.type.startsWith('video/') || /\.(mp4|webm|mov|ogg)$/i.test(file.name);
+                const thumb = document.createElement('div');
+                thumb.className = 'relative w-14 h-14 rounded-lg border border-[#d6c7af] bg-stone-100 p-0.5 overflow-hidden shadow-xs flex items-center justify-center';
+                
+                if (isVid) {
+                    const vidUrl = URL.createObjectURL(file);
+                    thumb.innerHTML = `
+                        <video src="${vidUrl}" class="w-full h-full object-cover" muted></video>
+                        <div class="absolute inset-0 bg-black/30 flex items-center justify-center text-white text-[10px]">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                    `;
                     galleryContainer.appendChild(thumb);
-                };
-                reader.readAsDataURL(file);
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        thumb.innerHTML = `<img src="${evt.target.result}" class="w-full h-full object-contain">`;
+                        galleryContainer.appendChild(thumb);
+                    };
+                    reader.readAsDataURL(file);
+                }
             });
         });
     }

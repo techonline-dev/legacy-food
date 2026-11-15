@@ -66,6 +66,9 @@
                                                 <?php if (!empty($p['is_bestseller'])): ?>
                                                     <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300">Bestseller</span>
                                                 <?php endif; ?>
+                                                <?php if (!empty($p['video_url'])): ?>
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300">Video</span>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     </div>

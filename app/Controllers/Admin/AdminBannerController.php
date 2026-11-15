@@ -45,17 +45,50 @@ class AdminBannerController extends Controller {
 
         $title = sanitize($this->request->input('title'));
         $subtitle = sanitize($this->request->input('subtitle'));
-        $image = sanitize($this->request->input('image'));
+        $mediaType = sanitize($this->request->input('media_type', 'image'));
+        $image = sanitize($this->request->input('image', ''));
+        $videoUrl = sanitize($this->request->input('video_url', ''));
         $ctaText = sanitize($this->request->input('cta_text'));
         $ctaUrl = sanitize($this->request->input('cta_url'));
         $type = sanitize($this->request->input('type', 'hero'));
         $order = (int)$this->request->input('sort_order', 0);
         $status = sanitize($this->request->input('status', 'active'));
 
+        // Handle manual image file upload
+        if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] === UPLOAD_ERR_OK) {
+            $upImg = $this->uploadMediaFile($_FILES['image_file'], 'banners', 'banner_img');
+            if ($upImg) {
+                $image = $upImg['url'];
+            }
+        }
+
+        // Handle manual video file upload
+        if (isset($_FILES['video_file']) && $_FILES['video_file']['error'] === UPLOAD_ERR_OK) {
+            $upVid = $this->uploadMediaFile($_FILES['video_file'], 'banners', 'banner_vid');
+            if ($upVid) {
+                $videoUrl = $upVid['url'];
+                $mediaType = 'video';
+            }
+        }
+
+        if (!empty($videoUrl) && $mediaType !== 'image') {
+            $mediaType = 'video';
+        } elseif (empty($videoUrl)) {
+            $mediaType = 'image';
+        }
+
+        if (empty($image) && empty($videoUrl)) {
+            flash('error', 'Please provide an image or video for the banner.');
+            $this->redirect('admin/banners');
+            return;
+        }
+
         Database::insert('banners', [
             'title' => $title,
             'subtitle' => $subtitle,
-            'image' => $image,
+            'image' => $image ?: null,
+            'video_url' => $videoUrl ?: null,
+            'media_type' => $mediaType,
             'cta_text' => $ctaText,
             'cta_url' => $ctaUrl,
             'type' => $type,
@@ -83,17 +116,44 @@ class AdminBannerController extends Controller {
 
         $title = sanitize($this->request->input('title'));
         $subtitle = sanitize($this->request->input('subtitle'));
-        $image = sanitize($this->request->input('image'));
+        $mediaType = sanitize($this->request->input('media_type', $banner['media_type'] ?? 'image'));
+        $image = sanitize($this->request->input('image', $banner['image'] ?? ''));
+        $videoUrl = sanitize($this->request->input('video_url', $banner['video_url'] ?? ''));
         $ctaText = sanitize($this->request->input('cta_text'));
         $ctaUrl = sanitize($this->request->input('cta_url'));
         $type = sanitize($this->request->input('type', 'hero'));
         $order = (int)$this->request->input('sort_order', 0);
         $status = sanitize($this->request->input('status', 'active'));
 
+        // Handle manual image file upload
+        if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] === UPLOAD_ERR_OK) {
+            $upImg = $this->uploadMediaFile($_FILES['image_file'], 'banners', 'banner_img');
+            if ($upImg) {
+                $image = $upImg['url'];
+            }
+        }
+
+        // Handle manual video file upload
+        if (isset($_FILES['video_file']) && $_FILES['video_file']['error'] === UPLOAD_ERR_OK) {
+            $upVid = $this->uploadMediaFile($_FILES['video_file'], 'banners', 'banner_vid');
+            if ($upVid) {
+                $videoUrl = $upVid['url'];
+                $mediaType = 'video';
+            }
+        }
+
+        if (!empty($videoUrl) && $this->request->input('media_type') === 'video') {
+            $mediaType = 'video';
+        } elseif (empty($videoUrl)) {
+            $mediaType = 'image';
+        }
+
         Database::update('banners', [
             'title' => $title,
             'subtitle' => $subtitle,
-            'image' => $image,
+            'image' => $image ?: null,
+            'video_url' => $videoUrl ?: null,
+            'media_type' => $mediaType,
             'cta_text' => $ctaText,
             'cta_url' => $ctaUrl,
             'type' => $type,

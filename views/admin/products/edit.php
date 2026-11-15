@@ -320,22 +320,61 @@
                     </div>
                 </div>
 
-                <!-- Product Gallery Images (Multiple) -->
+                <!-- Product Featured Video / Promo Reel -->
+                <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-display text-base font-bold text-[#07160d]">Product Video (Optional)</h2>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-semibold">Video Reel</span>
+                    </div>
+
+                    <!-- Video Preview Box -->
+                    <div class="text-center p-3 bg-stone-50 rounded-xl border border-[#e7dec8] <?= empty($product['video_url']) ? 'hidden' : '' ?>" id="edit-video-preview-box">
+                        <video id="edit-feat-video" src="<?= e($product['video_url'] ?? '') ?>" controls class="max-h-40 mx-auto rounded-lg bg-black border border-[#e7dec8]"></video>
+                        <span class="text-[10px] text-stone-500 mt-1.5 block">Video Preview</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Video URL (MP4 / YouTube / Vimeo)</label>
+                        <input type="text" id="edit_video_url" name="video_url" value="<?= e($product['video_url'] ?? '') ?>" placeholder="https://...mp4 or YouTube link"
+                               class="w-full py-2 px-3 rounded-xl bg-white border border-[#d6c7af] text-xs text-[#1c1917] focus:border-[#bc944c] focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Replace with Video File (MP4, WebM, MOV)</label>
+                        <input type="file" id="edit_video_file" name="video_file" accept="video/*"
+                               class="w-full text-xs text-stone-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#bc944c] file:text-[#07160d] hover:file:bg-[#d8bd99] cursor-pointer">
+                        <p class="text-[10px] text-stone-400 mt-1">Accepts MP4, WebM, MOV files up to 100MB.</p>
+                    </div>
+                </div>
+
+                <!-- Product Gallery Media (Images & Videos) -->
                 <div class="p-6 rounded-2xl bg-white border border-[#e7dec8] shadow-sm space-y-4">
                     <div class="flex items-center justify-between">
                         <h2 class="font-display text-base font-bold text-[#07160d]">Product Gallery (<?= count($images ?? []) ?>)</h2>
-                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#faf8f5] text-[#bc944c] border border-[#d6c7af] font-semibold">Gallery</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#faf8f5] text-[#bc944c] border border-[#d6c7af] font-semibold">Multi-Media</span>
                     </div>
 
-                    <!-- Existing Gallery Images -->
+                    <!-- Existing Gallery Media -->
                     <?php if (!empty($images)): ?>
                         <div class="space-y-2">
-                            <label class="block text-[11px] font-semibold text-stone-600 uppercase tracking-wider">Current Gallery Images</label>
+                            <label class="block text-[11px] font-semibold text-stone-600 uppercase tracking-wider">Current Gallery Items</label>
                             <div class="grid grid-cols-3 gap-2.5">
                                 <?php foreach ($images as $img): ?>
-                                    <div class="relative group rounded-xl border border-[#d6c7af] bg-white p-1.5 overflow-hidden shadow-xs">
-                                        <img src="<?= e($img['image_url']) ?>" class="w-full h-16 object-contain rounded-lg">
-                                        <button type="button" class="btn-delete-gallery-img absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-xs opacity-90 hover:opacity-100 shadow-xs" data-id="<?= $img['id'] ?>" title="Delete image">×</button>
+                                    <?php 
+                                        $isGalleryVid = ($img['media_type'] ?? '') === 'video' || is_video_url($img['image_url']);
+                                    ?>
+                                    <div class="relative group rounded-xl border border-[#d6c7af] bg-white p-1.5 overflow-hidden shadow-xs flex items-center justify-center">
+                                        <?php if ($isGalleryVid): ?>
+                                            <div class="w-full h-16 bg-black rounded-lg flex items-center justify-center relative overflow-hidden">
+                                                <video src="<?= e($img['image_url']) ?>" class="w-full h-full object-cover" muted></video>
+                                                <div class="absolute inset-0 bg-black/40 flex items-center justify-center text-white">
+                                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                                </div>
+                                            </div>
+                                        <?php else: ?>
+                                            <img src="<?= e($img['image_url']) ?>" class="w-full h-16 object-contain rounded-lg">
+                                        <?php endif; ?>
+                                        <button type="button" class="btn-delete-gallery-img absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-xs opacity-90 hover:opacity-100 shadow-xs z-10" data-id="<?= $img['id'] ?>" title="Delete media">×</button>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
@@ -346,17 +385,17 @@
 
                     <div class="pt-2 border-t border-stone-100 space-y-3">
                         <div>
-                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Upload More Gallery Images</label>
-                            <input type="file" id="edit_gallery_files" name="gallery_files[]" multiple accept="image/*"
+                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Upload More Media Files (Images & Videos)</label>
+                            <input type="file" id="edit_gallery_files" name="gallery_files[]" multiple accept="image/*,video/*"
                                    class="w-full text-xs text-stone-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#bc944c] file:text-[#07160d] hover:file:bg-[#d8bd99] cursor-pointer">
                             <div id="edit-gallery-preview" class="mt-2 flex flex-wrap gap-2 empty:hidden"></div>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Or Paste Gallery Image URLs</label>
-                            <textarea name="gallery_urls" rows="2" placeholder="https://example.com/img1.jpg&#10;https://example.com/img2.jpg"
+                            <label class="block text-xs font-semibold text-[#07160d] uppercase tracking-wider mb-1.5">Or Paste Media URLs (Images & Videos)</label>
+                            <textarea name="gallery_urls" rows="2" placeholder="https://example.com/img1.jpg&#10;https://example.com/video1.mp4&#10;https://youtube.com/..."
                                       class="w-full py-2 px-3 rounded-xl bg-white border border-[#d6c7af] text-xs font-mono text-[#1c1917] focus:border-[#bc944c] focus:outline-none"></textarea>
-                            <p class="text-[10px] text-stone-400 mt-1">One URL per line.</p>
+                            <p class="text-[10px] text-stone-400 mt-1">One URL per line. Supports image URLs, video links (.mp4), and YouTube links.</p>
                         </div>
                     </div>
                 </div>
@@ -393,21 +432,62 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Gallery Files Preview
+    // Video Preview
+    const videoInput = document.getElementById('edit_video_url');
+    const videoFileInput = document.getElementById('edit_video_file');
+    const videoBox = document.getElementById('edit-video-preview-box');
+    const videoPreview = document.getElementById('edit-feat-video');
+
+    if (videoInput && videoPreview && videoBox) {
+        videoInput.addEventListener('input', function() {
+            const val = this.value.trim();
+            if (val) {
+                videoBox.classList.remove('hidden');
+                videoPreview.src = val;
+            } else if (!videoFileInput.files.length) {
+                videoBox.classList.add('hidden');
+            }
+        });
+    }
+
+    if (videoFileInput && videoPreview && videoBox) {
+        videoFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                videoBox.classList.remove('hidden');
+                videoPreview.src = URL.createObjectURL(file);
+            }
+        });
+    }
+
+    // Gallery Files Preview (Images & Videos)
     const galleryInput = document.getElementById('edit_gallery_files');
     const galleryPreview = document.getElementById('edit-gallery-preview');
     if (galleryInput && galleryPreview) {
         galleryInput.addEventListener('change', function(e) {
             galleryPreview.innerHTML = '';
             Array.from(e.target.files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    const thumb = document.createElement('div');
-                    thumb.className = 'w-14 h-14 rounded-lg border border-[#d6c7af] bg-white p-1 overflow-hidden shadow-xs';
-                    thumb.innerHTML = `<img src="${evt.target.result}" class="w-full h-full object-contain">`;
+                const isVid = file.type.startsWith('video/') || /\.(mp4|webm|mov|ogg)$/i.test(file.name);
+                const thumb = document.createElement('div');
+                thumb.className = 'relative w-14 h-14 rounded-lg border border-[#d6c7af] bg-stone-100 p-0.5 overflow-hidden shadow-xs flex items-center justify-center';
+                
+                if (isVid) {
+                    const vidUrl = URL.createObjectURL(file);
+                    thumb.innerHTML = `
+                        <video src="${vidUrl}" class="w-full h-full object-cover" muted></video>
+                        <div class="absolute inset-0 bg-black/30 flex items-center justify-center text-white text-[10px]">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                    `;
                     galleryPreview.appendChild(thumb);
-                };
-                reader.readAsDataURL(file);
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        thumb.innerHTML = `<img src="${evt.target.result}" class="w-full h-full object-contain">`;
+                        galleryPreview.appendChild(thumb);
+                    };
+                    reader.readAsDataURL(file);
+                }
             });
         });
     }

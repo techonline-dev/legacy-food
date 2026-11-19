@@ -21,8 +21,14 @@ spl_autoload_register(function ($class) {
     }
 });
 
-// Load environment variables from .env and optional .env.local
+// Load environment variables from .env, .env.local, and .env.production
+$isLivePath = str_contains(__DIR__, '/home/u291611210') || str_contains(__DIR__, 'lensinteractive.com');
 $envFiles = [__DIR__ . '/../.env', __DIR__ . '/../.env.local'];
+if ($isLivePath && file_exists(__DIR__ . '/../.env.production')) {
+    $envFiles[] = __DIR__ . '/../.env.production';
+} elseif (!file_exists(__DIR__ . '/../.env') && file_exists(__DIR__ . '/../.env.production')) {
+    $envFiles[] = __DIR__ . '/../.env.production';
+}
 foreach ($envFiles as $envFile) {
     if (file_exists($envFile)) {
         $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);

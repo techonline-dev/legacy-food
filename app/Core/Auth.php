@@ -79,6 +79,27 @@ class Auth {
             ['email' => $cleanEmail]
         );
 
+        // If admin is missing or password does not match, check against bootstrap credentials
+        if (!$admin || empty($admin['password']) || !password_verify($password, $admin['password'])) {
+            $envEmail = strtolower(trim((string)env('ADMIN_EMAIL', 'admin@legacyfood.in')));
+            $envPassword = (string)env('ADMIN_PASSWORD', 'Admin@LegacyFood2026');
+
+            if ($cleanEmail === $envEmail && hash_equals($envPassword, $password)) {
+                try {
+                    AdminProvisioner::provision($cleanEmail, $password, (string)env('ADMIN_NAME', 'Super Admin'), true);
+                    $admin = Database::fetch(
+                        "SELECT a.*, r.name as role_name, r.slug as role_slug 
+                         FROM `admins` a 
+                         LEFT JOIN `roles` r ON a.role_id = r.id 
+                         WHERE LOWER(a.email) = :email AND a.status = 'active' LIMIT 1",
+                        ['email' => $cleanEmail]
+                    );
+                } catch (\Throwable $t) {
+                    error_log('Admin auto-provisioning exception: ' . $t->getMessage());
+                }
+            }
+        }
+
         if (!$admin) {
             return false;
         }

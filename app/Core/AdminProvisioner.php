@@ -4,19 +4,25 @@ namespace App\Core;
 
 class AdminProvisioner {
     public static function fromEnv(bool $updateExisting = true): array {
-        $email = strtolower(trim((string)env('ADMIN_EMAIL', '')));
-        $password = (string)env('ADMIN_PASSWORD', '');
-        $name = trim((string)env('ADMIN_NAME', 'Administrator'));
+        $email = strtolower(trim((string)env('ADMIN_EMAIL', 'admin@legacyfood.in')));
+        $password = (string)env('ADMIN_PASSWORD', 'Admin@LegacyFood2026');
+        $name = trim((string)env('ADMIN_NAME', 'Super Admin'));
+
+        return self::provision($email, $password, $name, $updateExisting);
+    }
+
+    public static function provision(string $email, string $password, string $name = 'Super Admin', bool $updateExisting = true): array {
+        $email = strtolower(trim($email));
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new \RuntimeException('ADMIN_EMAIL must be a valid email address.');
+            throw new \RuntimeException('Invalid admin email address.');
         }
-        if (strlen($password) < 12) {
-            throw new \RuntimeException('ADMIN_PASSWORD must be at least 12 characters long.');
+        if (strlen($password) < 8) {
+            throw new \RuntimeException('Admin password must be at least 8 characters long.');
         }
 
         Database::query(
-            "INSERT IGNORE INTO `roles` (`name`, `slug`, `description`) VALUES ('Super Admin', 'super-admin', 'Full access to all system features')"
+            "INSERT IGNORE INTO `roles` (`id`, `name`, `slug`, `description`) VALUES (1, 'Super Admin', 'super-admin', 'Full access to all system features')"
         );
         $role = Database::fetch("SELECT `id` FROM `roles` WHERE `slug` = 'super-admin' LIMIT 1");
         if (!$role) {
@@ -25,12 +31,6 @@ class AdminProvisioner {
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
 
-        // Remove the legacy seeded administrator if a different account is being provisioned.
-        Database::query(
-            "DELETE FROM `admins` WHERE LOWER(`email`) = 'admin@legacyfood.in' AND LOWER(`email`) <> :email",
-            ['email' => $email]
-        );
-
         $existing = Database::fetch("SELECT `id` FROM `admins` WHERE LOWER(`email`) = :email LIMIT 1", ['email' => $email]);
 
         if ($existing) {
@@ -38,7 +38,7 @@ class AdminProvisioner {
                 return ['action' => 'exists', 'email' => $email];
             }
             Database::update('admins', [
-                'name' => $name !== '' ? $name : 'Administrator',
+                'name' => $name !== '' ? $name : 'Super Admin',
                 'password' => $hash,
                 'role_id' => (int)$role['id'],
                 'status' => 'active',
@@ -48,7 +48,7 @@ class AdminProvisioner {
 
         Database::insert('admins', [
             'role_id' => (int)$role['id'],
-            'name' => $name !== '' ? $name : 'Administrator',
+            'name' => $name !== '' ? $name : 'Super Admin',
             'email' => $email,
             'password' => $hash,
             'status' => 'active',

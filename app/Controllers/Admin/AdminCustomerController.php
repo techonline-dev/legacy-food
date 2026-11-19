@@ -23,8 +23,11 @@ class AdminCustomerController extends Controller {
         $params = [];
 
         if ($q !== '') {
-            $where = "(u.name LIKE :q OR u.email LIKE :q OR u.phone LIKE :q)";
-            $params['q'] = '%' . $q . '%';
+            $where = "(u.name LIKE :q1 OR u.email LIKE :q2 OR u.phone LIKE :q3)";
+            $searchTerm = '%' . $q . '%';
+            $params['q1'] = $searchTerm;
+            $params['q2'] = $searchTerm;
+            $params['q3'] = $searchTerm;
         }
 
         $customers = Database::fetchAll("

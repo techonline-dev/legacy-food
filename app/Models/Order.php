@@ -112,16 +112,18 @@ class Order extends Model {
 
                 // Deduct inventory atomically so concurrent orders cannot oversell
                 if ($item['variant_id']) {
-                    $affected = Database::query("UPDATE `product_variants` SET `stock_quantity` = `stock_quantity` - :qty WHERE `id` = :vid AND `stock_quantity` >= :qty", [
-                        'qty' => $item['quantity'],
+                    $affected = Database::query("UPDATE `product_variants` SET `stock_quantity` = `stock_quantity` - :deduct_qty WHERE `id` = :vid AND `stock_quantity` >= :min_qty", [
+                        'deduct_qty' => $item['quantity'],
+                        'min_qty' => $item['quantity'],
                         'vid' => $item['variant_id']
                     ])->rowCount();
                     if ($affected === 0) {
                         throw new \RuntimeException("Insufficient stock for {$item['name']}.");
                     }
                 }
-                $affected = Database::query("UPDATE `products` SET `stock_quantity` = `stock_quantity` - :qty WHERE `id` = :pid AND `stock_quantity` >= :qty", [
-                    'qty' => $item['quantity'],
+                $affected = Database::query("UPDATE `products` SET `stock_quantity` = `stock_quantity` - :deduct_qty WHERE `id` = :pid AND `stock_quantity` >= :min_qty", [
+                    'deduct_qty' => $item['quantity'],
+                    'min_qty' => $item['quantity'],
                     'pid' => $item['product_id']
                 ])->rowCount();
                 if ($affected === 0) {
@@ -219,8 +221,11 @@ class Order extends Model {
             return ['success' => true, 'order_id' => $orderId, 'order_number' => $orderNumber];
         } catch (\Throwable $e) {
             Database::rollBack();
-            error_log("Order creation failed: " . $e->getMessage());
-            return ['success' => false, 'error' => 'Order processing failed. Please review your cart and try again.'];
+            error_log("Order creation failed: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            $errorMsg = ($e instanceof \RuntimeException || config('app.debug'))
+                ? $e->getMessage()
+                : 'Order processing failed. Please review your cart and try again.';
+            return ['success' => false, 'error' => $errorMsg];
         }
     }
 

@@ -72,8 +72,11 @@ class Product extends Model {
         }
 
         if (!empty($filters['search'])) {
-            $where[] = "(p.name LIKE :search OR p.short_description LIKE :search OR p.sku LIKE :search)";
-            $params['search'] = '%' . $filters['search'] . '%';
+            $where[] = "(p.name LIKE :search1 OR p.short_description LIKE :search2 OR p.sku LIKE :search3)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params['search1'] = $searchTerm;
+            $params['search2'] = $searchTerm;
+            $params['search3'] = $searchTerm;
         }
 
         if (!empty($filters['min_price'])) {

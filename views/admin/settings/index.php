@@ -37,7 +37,7 @@ $footerCopyrightText = $footer['footer_copyright_text'] ?? '© {year} Legacy Foo
 $footerBadgesText = $footer['footer_badges_text'] ?? '100% NABL Accredited Lab Verified • FSSAI Compliant';
 ?>
 
-<div class="space-y-6 max-w-5xl mx-auto">
+<div class="space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

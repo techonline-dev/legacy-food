@@ -9,7 +9,7 @@
  */
 ?>
 
-<div class="space-y-6 max-w-6xl mx-auto pb-16">
+<div class="space-y-6 pb-16">
     <!-- Top Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
